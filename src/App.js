@@ -1,6 +1,10 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import {
+  BrowserRouter, Routes, Route,
+
+} from "react-router-dom";
 import SignUp from "./views/SignUp";
+import Header from "./components/Header";
 import "./App.css";
 
 function Home() {
@@ -10,10 +14,7 @@ function Home() {
 export default function App() {
   return (
     <BrowserRouter>
-      <nav style={{ display: "flex", gap: 12, padding: 12 }}>
-        <Link to="/">Home</Link>
-        <Link to="/signup">Sign up</Link>
-      </nav>
+      <Header />
 
       <Routes>
         <Route path="/" element={<Home />} />

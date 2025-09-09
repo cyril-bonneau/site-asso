@@ -60,7 +60,7 @@ function SignUp() {
 
     return (
         <div className="Heading">
-            <h1>TEST BLABLA</h1>
+            <h1>Inscription</h1>
             <div className="App">
                 <form onSubmit={handleSubmit}>
                     <label>Email</label>
