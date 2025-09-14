@@ -1,6 +1,6 @@
 require("dotenv").config()
 const express = require("express");
-const cors = require("cors")
+const corsMiddleware = require("./middlewares/corsMiddlewares")
 const {
     initKeys,
     signAccessToken, signRefreshToken,
@@ -11,12 +11,13 @@ const {
 const port = process.env.PORT
 const app = express()
 const cookieParser = require('cookie-parser');
-app.use(cookieParser());
 const init = require("./dbRequest/init")
-const { getUsers } = require("./dbRequest/get")
+
+const { getUsers, getUserPassword } = require("./dbRequest/get")
 const { insertUser, insertKilometers } = require("./dbRequest/post")
 
-app.use(cors())
+app.use(cookieParser());
+app.use(corsMiddleware);
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
 try {
@@ -29,14 +30,11 @@ try {
 
 async () => {
     await initKeys();
-    const isProd = process.env.NODE_ENV === 'production';
 };
 
 app.post("/register", async (req, res) => {
     const data = req.body
     req.body.password = await hashPassword(req.body.password)
-    const isSame = await verifyPassword(req.body.password, 'test123456789')
-    console.log("is Same ?", isSame)
     const result = await insertUser(data)
     if (result instanceof Error) {
         if (result.message.includes("UNIQUE constraint failed: users.email")) {
@@ -48,6 +46,28 @@ app.post("/register", async (req, res) => {
         res.send(result)
         console.log(`Your Email is ${data.email} and your password is ${data.password}`)
         console.log(`(alg=${process.env.JWT_ALG})`)
+    }
+})
+
+app.post("/signin", async (req, res) => {
+    const data = req.body
+    const result = await getUserPassword(data.email)
+    if (!result) {
+        return res.status(401).json({ error: "Invalid email or password" });
+    }
+    console.log(result.password + ' ' + req.body.password)
+    const isSame = await verifyPassword(result.password, req.body.password)
+    console.log(isSame)
+    if (!isSame) {
+        return res.status(401).json({ error: "Invalid email or password" });
+    } else {
+        //EN TRAVAUX
+        const accessToken = await signAccessToken(data.email);
+        const refreshToken = await signRefreshToken(data.email);
+        const refreshExp = await decodeRefreshExpSeconds(refreshToken);
+        const refreshTokenHash = await hashToken(refreshToken);
+        // EN TRAVAUX
+        res.status(201).send("User signed in successfully")
     }
 })
 

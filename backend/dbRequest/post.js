@@ -4,8 +4,8 @@ const db = new Database('app.db')
 async function insertUser(data) {
     try {
         const stmt = db.prepare('INSERT INTO users (email, name, phone, password) VALUES (?, ?, ?, ?)');
-        const info = stmt.run(data.email, data.name, data.phone, data.password);
-        console.log(`User inserted with ID: ${info.lastInsertRowid}`);
+        stmt.run(data.email, data.name, data.phone, data.password);
+        return { code: 201 }
     } catch (error) {
         console.error("Error inserting user:", error);
         return error

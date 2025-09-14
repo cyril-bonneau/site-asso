@@ -3,21 +3,11 @@ import "../style/Signup.css";
 
 function SignUp() {
 
-    const [email, setEmail] = useState("");
-    const [name, setName] = useState("");
-    const [phone, setPhone] = useState("0673939882");
+    const [email, setEmail] = useState("j@j.j");
     const [password, setPassword] = useState("azerty123456789");
 
     const handleEmail = (e) => {
         setEmail(e.target.value);
-    }
-
-    const handleName = (e) => {
-        setName(e.target.value);
-    }
-
-    const handlePhone = (e) => {
-        setPhone(e.target.value);
     }
 
     const handlePassword = (e) => {
@@ -26,31 +16,29 @@ function SignUp() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!email || !name || !phone || !password) {
+        if (!email || !password) {
             return alert("Please fill all the fields")
         } else {
             const userData = {
                 email: email,
-                name: name,
-                phone: phone,
                 password: password
             }
             try {
-                const add = await fetch("http://localhost:5000/register", {
-                    method: "POST",
+                const checkin = await fetch("http://localhost:5000/signin", {
+                    method: "post",
                     headers: {
                         "Content-Type": "application/json",
                     },
+                    credentials: "include",
                     body: JSON.stringify(userData),
                 });
-                const data = await add.json();
-                if (add.ok) {
-                    alert("User added successfully");
-                    console.log(add)
+                if (checkin.ok) {
+                    alert("you are signed in");
+                    console.log(checkin)
                 }
-                else if (add.status === 400 && data.error === "Email_already_exists") {
-                    alert("Email already exists");
-                    throw new Error("Failed to add user");
+                else if (checkin.status === 401) {
+                    alert("Invalid email or password");
+                    throw new Error("Failed to connect user");
                 }
             } catch (err) {
                 console.error(err)
@@ -60,7 +48,7 @@ function SignUp() {
 
     return (
         <div className="Heading">
-            <h1>Inscription</h1>
+            <h1>Connexion</h1>
             <div className="App">
                 <form onSubmit={handleSubmit}>
                     <label>Email</label>
@@ -68,18 +56,6 @@ function SignUp() {
                         placeholder="Enter Email"
                         type="email"
                         onChange={handleEmail}
-                    />
-                    <label>Name</label>
-                    <input
-                        placeholder="Enter Name"
-                        type="text"
-                        onChange={handleName}
-                    />
-                    <label>Phone Number</label>
-                    <input
-                        placeholder="Enter Phone Number"
-                        type="tel"
-                        onChange={handlePhone}
                     />
                     <label>Password</label>
                     <input

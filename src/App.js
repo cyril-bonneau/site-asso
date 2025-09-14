@@ -1,9 +1,9 @@
 import React from "react";
 import {
   BrowserRouter, Routes, Route,
-
 } from "react-router-dom";
 import SignUp from "./views/SignUp";
+import SignIn from "./views/SignIn";
 import Header from "./components/Header";
 import "./App.css";
 
@@ -19,6 +19,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/signin" element={<SignIn />} />
       </Routes>
     </BrowserRouter>
   );

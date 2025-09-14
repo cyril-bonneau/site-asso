@@ -8,6 +8,7 @@ export default function Header() {
     const routes = [
         { to: "/", label: "Accueil", end: true },
         { to: "/signup", label: "Inscription" },
+        { to: "/signin", label: "Connexion" }
     ];
 
     const closeMenu = () => setOpen(false);

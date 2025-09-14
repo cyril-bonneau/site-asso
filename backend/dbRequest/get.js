@@ -1,24 +1,30 @@
 const Database = require('better-sqlite3')
-const db = new Database('users.db')
+const db = new Database('app.db')
 
 function getUsers(userId) {
     try {
-        db.prepare(`SELECT email FROM users WHERE user_id=${userId}`).run();
+        const data = db.prepare('SELECT email FROM users WHERE user_id= ?');
+        const result = data.get(userId);
+        return result
     } catch (error) {
         console.error("Error getting users:", error);
     }
 }
 
-function getUserPassword(email) {
+async function getUserPassword(email) {
     try {
-        db.prepare(`SELECT password FROM users WHERE email='${email}'`).run();
+        const data = db.prepare('SELECT password FROM users WHERE email= ?');
+        const result = data.get(email);
+        return result
     } catch (error) {
         console.error("Error getting user by email:", error);
     }
 }
 function getUserId(token) {
     try {
-        db.prepare(`SELECT user_id FROM refresh_tokens WHERE token_hash=${token}`).run();
+        const data = db.prepare('SELECT user_id FROM refresh_tokens WHERE token_hash= ?');
+        const result = data.get(token);
+        return result
     } catch (error) {
         console.error("Error getting user ID:", error);
     }
@@ -35,5 +41,6 @@ function getKilometers(id) {
 module.exports = {
     getUsers,
     getKilometers,
-    getUserId
+    getUserId,
+    getUserPassword
 }
