@@ -24,21 +24,26 @@ function SignUp() {
                 password: password
             }
             try {
-                const checkin = await fetch("http://localhost:5000/signin", {
+                const checkin = await fetch("/api/login", {
                     method: "post",
+                    credentials: "include",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    credentials: "include",
                     body: JSON.stringify(userData),
                 });
+                const data = await checkin.json();
                 if (checkin.ok) {
                     alert("you are signed in");
-                    console.log(checkin)
+                    console.log(data.accessToken)
+                    console.log(data.refreshToken)
                 }
                 else if (checkin.status === 401) {
                     alert("Invalid email or password");
                     throw new Error("Failed to connect user");
+                } else if (checkin.status === 500) {
+                    alert("Server error. Please try again later.");
+                    throw new Error("Server error");
                 }
             } catch (err) {
                 console.error(err)

@@ -3,8 +3,8 @@ const argon2 = require('argon2');
 const crypto = require('crypto');
 const { loadAllKeys } = require('./key');
 
-const ACCESS_TTL = process.env.ACCESS_TTL || '15m'; // Default to 15 minutes
-const REFRESH_TTL = process.env.REFRESH_TTL || '7d'; // Default to 7 days
+const ACCESS_TTL = process.env.ACCESS_TTL || '15m';
+const REFRESH_TTL = process.env.REFRESH_TTL || '7d';
 
 let ALG, accessKeys, refreshKeys;
 
@@ -16,14 +16,14 @@ async function initKeys() {
 }
 
 async function signAccessToken(user) {
-    return await new SignJWT({ sub: String(user.id) })
+    return await new SignJWT({ sub: String(user) })
         .setProtectedHeader({ alg: ALG })
         .setExpirationTime(ACCESS_TTL)
         .sign(accessKeys.privateKey);
 }
 
 async function signRefreshToken(user, jti) {
-    return await new SignJWT({ sub: String(user.id), jti })
+    return await new SignJWT({ sub: String(user), jti })
         .setProtectedHeader({ alg: ALG })
         .setExpirationTime(REFRESH_TTL)
         .sign(refreshKeys.privateKey);

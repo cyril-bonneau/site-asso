@@ -23,19 +23,7 @@ function insertKilometers(data) {
     }
 }
 
-function insertRefreshToken(data) {
-    try {
-        const stmt = db.prepare('INSERT INTO refresh_tokens (user_id, token_hash, expires_at, revoked, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)');
-        const info = stmt.run(data.user_id, data.token_hash, data.expires_at, data.revoked);
-        console.log(`Refresh token inserted with ID: ${info.lastInsertRowid}`);
-    } catch (error) {
-        console.error("Error inserting refresh token:", error);
-        return error
-    }
-}
-
 module.exports = {
     insertUser,
-    insertKilometers,
-    insertRefreshToken
+    insertKilometers
 }

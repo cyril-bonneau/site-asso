@@ -25,6 +25,7 @@ function initAuthManagementDB() {
     expires_at INTEGER NOT NULL,
     revoked INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
+    jti TEXT UNIQUE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)`).run();
     } catch (error) {
         console.error("Error creating table:", error);

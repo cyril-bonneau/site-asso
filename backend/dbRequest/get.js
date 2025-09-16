@@ -11,9 +11,9 @@ function getUsers(userId) {
     }
 }
 
-async function getUserPassword(email) {
+async function getUserPasswordAndId(email) {
     try {
-        const data = db.prepare('SELECT password FROM users WHERE email= ?');
+        const data = db.prepare('SELECT id, password FROM users WHERE email= ?');
         const result = data.get(email);
         return result
     } catch (error) {
@@ -42,5 +42,5 @@ module.exports = {
     getUsers,
     getKilometers,
     getUserId,
-    getUserPassword
+    getUserPasswordAndId
 }

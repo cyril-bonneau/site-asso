@@ -1,6 +1,8 @@
 require("dotenv").config()
+const cors = require('cors');
 const express = require("express");
-const corsMiddleware = require("./middlewares/corsMiddlewares")
+const { corsMiddleware, corsOptions } = require("./middlewares/corsMiddlewares")
+const https = require('https');
 const {
     initKeys,
     signAccessToken, signRefreshToken,
@@ -10,14 +12,19 @@ const {
 } = require('./auth/auth');
 const port = process.env.PORT
 const app = express()
+const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
 const init = require("./dbRequest/init")
+const utils = require("./utils/convert")
 
-const { getUsers, getUserPassword } = require("./dbRequest/get")
+const { getUsers, getUserPasswordAndId } = require("./dbRequest/get")
 const { insertUser, insertKilometers } = require("./dbRequest/post")
+const { getTokenByJti, revokeToken, insertToken } = require("./dbRequest/tokenManager");
+const { error } = require("console");
 
 app.use(cookieParser());
 app.use(corsMiddleware);
+app.options(/^.*$/, cors(corsOptions)); // enable pre-flight for all routes
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
 try {
@@ -27,10 +34,6 @@ try {
 } catch (error) {
     console.error("Error initializing database:", error);
 }
-
-async () => {
-    await initKeys();
-};
 
 app.post("/register", async (req, res) => {
     const data = req.body
@@ -49,25 +52,64 @@ app.post("/register", async (req, res) => {
     }
 })
 
-app.post("/signin", async (req, res) => {
-    const data = req.body
-    const result = await getUserPassword(data.email)
+app.post("/login", async (req, res) => {
+    const { email, password } = req.body
+    const result = await getUserPasswordAndId(email)
+    console.log(result)
     if (!result) {
         return res.status(401).json({ error: "Invalid email or password" });
     }
-    console.log(result.password + ' ' + req.body.password)
-    const isSame = await verifyPassword(result.password, req.body.password)
-    console.log(isSame)
+    console.log(result.password + ' ' + password)
+    const isSame = await verifyPassword(result.password, password)
+    console.log('is same ' + isSame)
     if (!isSame) {
         return res.status(401).json({ error: "Invalid email or password" });
     } else {
-        //EN TRAVAUX
-        const accessToken = await signAccessToken(data.email);
-        const refreshToken = await signRefreshToken(data.email);
-        const refreshExp = await decodeRefreshExpSeconds(refreshToken);
-        const refreshTokenHash = await hashToken(refreshToken);
-        // EN TRAVAUX
-        res.status(201).send("User signed in successfully")
+        const { refreshToken, accessToken } = sendTokenToDb(result.id)
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        }).status(200).json({ accessToken });
+    }
+})
+
+app.post('/refresh', async (req, res) => {
+    try {
+        const { refreshToken } = req.cookies;
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'No refresh token provided' });
+        }
+        const payload = await verifyRefreshToken(refreshToken); //récupère les donnèes du token, obtiens le jti
+
+        const tokenHash = await getTokenByJti(payload.jti); //récupère le hash grace au jti
+        if (!tokenHash || tokenHash.revoked) {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+        }
+
+        const hash = await hashToken(refreshToken)
+
+        if (hash === tokenHash.token_hash) {
+            const user_id = payload.sub;
+            const result = await revokeToken({ jti: payload.jti, revoked: 1 });
+            console.log('je passe dedans')
+            console.log(result)
+            const { refreshToken, accessToken } = sendTokenToDb(user_id)
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            }).status(200).json({ accessToken });
+        } else {
+            return res.status(403).json({ error: 'forbidden' })
+        }
+    } catch (error) {
+        console.error('refresh error:', e)
+        return res.status(401).json({ error: 'Invalid refresh' })
     }
 })
 
@@ -83,8 +125,44 @@ app.post("/mileage", (req, res) => {
 app.get("/users", (req, res) => {
     const users = getUsers()
     res.send(users)
-})
+});
 
-app.listen(port, () => {
-    console.log(`server is running on port ${port}`)
-})
+async function sendTokenToDb(user_id) {
+
+    const jti = crypto.randomUUID();
+    const accessToken = await signAccessToken(user_id);
+    const refreshToken = await signRefreshToken(user_id, jti);
+
+    const payload = {
+        user_id: user_id,
+        token_hash: await hashToken(refreshToken),
+        expires_at: await decodeRefreshExpSeconds(refreshToken),
+        revoked: 0,
+        jti: jti
+    };
+
+    const dbResult = insertToken(payload);
+    if (dbResult instanceof Error) {
+        return res.status(500).send("Error inserting refresh token");
+    }
+    return {
+        refreshToken: refreshToken,
+        accessToken: accessToken
+    }
+}
+
+; (async () => {
+    try {
+        await initKeys();
+
+        const key = utils.fromBase64('LOCALHOST_CERT_KEY_PATH');
+        const cert = utils.fromBase64('LOCALHOST_CERT_CRT_PATH');
+
+        https.createServer({ key, cert }, app).listen(port, () => {
+            console.log(`HTTPS server running on https://localhost:${port}`);
+        });
+    } catch (err) {
+        console.error("Failed to init JWT keys:", err);
+        process.exit(1);
+    }
+})();
