@@ -6,7 +6,7 @@ const https = require('https');
 const {
     initKeys,
     signAccessToken, signRefreshToken,
-    verifyAccessToken, verifyRefreshToken,
+    getAccessTokenData, getRefreshTokenData,
     decodeRefreshExpSeconds, hashToken,
     hashPassword, verifyPassword,
 } = require('./auth/auth');
@@ -55,17 +55,17 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
     const { email, password } = req.body
     const result = await getUserPasswordAndId(email)
-    console.log(result)
+
     if (!result) {
         return res.status(401).json({ error: "Invalid email or password" });
     }
-    console.log(result.password + ' ' + password)
+
     const isSame = await verifyPassword(result.password, password)
-    console.log('is same ' + isSame)
+
     if (!isSame) {
         return res.status(401).json({ error: "Invalid email or password" });
     } else {
-        const { refreshToken, accessToken } = sendTokenToDb(result.id)
+        const { refreshToken, accessToken } = await sendTokenToDb(result.id)
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
@@ -82,7 +82,8 @@ app.post('/refresh', async (req, res) => {
         if (!refreshToken) {
             return res.status(401).json({ error: 'No refresh token provided' });
         }
-        const payload = await verifyRefreshToken(refreshToken); //récupère les donnèes du token, obtiens le jti
+        const payload = await getRefreshTokenData(refreshToken); //récupère les donnèes du token, obtiens le jti
+        const user_id = payload.sub;
 
         const tokenHash = await getTokenByJti(payload.jti); //récupère le hash grace au jti
         if (!tokenHash || tokenHash.revoked) {
@@ -92,11 +93,10 @@ app.post('/refresh', async (req, res) => {
         const hash = await hashToken(refreshToken)
 
         if (hash === tokenHash.token_hash) {
-            const user_id = payload.sub;
             const result = await revokeToken({ jti: payload.jti, revoked: 1 });
             console.log('je passe dedans')
             console.log(result)
-            const { refreshToken, accessToken } = sendTokenToDb(user_id)
+            const { refreshToken, accessToken } = await sendTokenToDb(user_id)
 
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
@@ -110,6 +110,21 @@ app.post('/refresh', async (req, res) => {
     } catch (error) {
         console.error('refresh error:', e)
         return res.status(401).json({ error: 'Invalid refresh' })
+    }
+})
+
+app.post('/logout', async (req, res) => {
+    try {
+        const { refreshToken } = req.cookies || {}
+        if (refreshToken) {
+            const tokenData = await getRefreshTokenData(refreshToken).catch(() => null)
+            if (tokenData?.jti) {
+                await revokeToken(tokenData.jti)
+            }
+        }
+    } finally {
+        res.clearCookie('refreshToken', { path: '/' })
+        res.status(204).end
     }
 })
 
@@ -142,6 +157,8 @@ async function sendTokenToDb(user_id) {
     };
 
     const dbResult = insertToken(payload);
+    console.log(refreshToken)
+    console.log(accessToken)
     if (dbResult instanceof Error) {
         return res.status(500).send("Error inserting refresh token");
     }

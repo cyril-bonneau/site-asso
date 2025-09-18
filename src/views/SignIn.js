@@ -3,7 +3,7 @@ import "../style/Signup.css";
 
 function SignUp() {
 
-    const [email, setEmail] = useState("j@j.j");
+    const [email, setEmail] = useState("b@b.b");
     const [password, setPassword] = useState("azerty123456789");
 
     const handleEmail = (e) => {
@@ -35,6 +35,7 @@ function SignUp() {
                 const data = await checkin.json();
                 if (checkin.ok) {
                     alert("you are signed in");
+                    console.log(data)
                     console.log(data.accessToken)
                     console.log(data.refreshToken)
                 }

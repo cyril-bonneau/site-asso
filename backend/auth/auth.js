@@ -29,12 +29,12 @@ async function signRefreshToken(user, jti) {
         .sign(refreshKeys.privateKey);
 }
 
-async function verifyAccessToken(token) {
+async function getAccessTokenData(token) {
     const { payload } = await jwtVerify(token, accessKeys.publicKey, { algorithms: [ALG] });
     return payload;
 }
 
-async function verifyRefreshToken(token) {
+async function getRefreshTokenData(token) {
     const { payload } = await jwtVerify(token, refreshKeys.publicKey, { algorithms: [ALG] });
     return payload;
 }
@@ -65,8 +65,8 @@ module.exports = {
     initKeys,
     signAccessToken,
     signRefreshToken,
-    verifyAccessToken,
-    verifyRefreshToken,
+    getAccessTokenData,
+    getRefreshTokenData,
     decodeRefreshExpSeconds,
     hashToken,
     hashPassword,
