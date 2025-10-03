@@ -1,5 +1,5 @@
-const fs = require('fs');
-const { importPKCS8, importSPKI } = require('jose');
+import fs from 'fs';
+import { importPKCS8, importSPKI } from 'jose';
 
 const ALG = process.env.JWT_ALG;
 
@@ -31,10 +31,8 @@ async function loadKeyPair(prefix) {
     throw new Error(`unsupported alg: ${ALG}`);
 }
 
-async function loadAllKeys() {
+export async function loadAllKeys() {
     const access = await loadKeyPair('ACCESS');
     const refresh = await loadKeyPair('REFRESH');
     return { ALG, access, refresh };
 }
-
-module.exports = { loadAllKeys };

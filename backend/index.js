@@ -1,26 +1,26 @@
-require("dotenv").config()
-const cors = require('cors');
-const express = require("express");
-const { corsMiddleware, corsOptions } = require("./middlewares/corsMiddlewares")
-const https = require('https');
-const {
+import 'dotenv/config';
+import cors from 'cors';
+import express from 'express';
+import { corsMiddleware, corsOptions } from './middlewares/corsMiddlewares.js'
+import https from 'https';
+import {
     initKeys,
     signAccessToken, signRefreshToken,
     getAccessTokenData, getRefreshTokenData,
     decodeRefreshExpSeconds, hashToken,
     hashPassword, verifyPassword,
-} = require('./auth/auth');
+} from './auth/auth.js';
 const port = process.env.PORT
 const app = express()
-const crypto = require('crypto');
-const cookieParser = require('cookie-parser');
-const init = require("./dbRequest/init")
-const utils = require("./utils/convert")
+import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
+import { initUserDB, initAuthManagementDB, initUserDataDB } from './dbRequest/init.js';
+import { fromBase64 } from './utils/convert.js'
 
-const { getUsers, getUserPasswordAndId } = require("./dbRequest/get")
-const { insertUser, insertKilometers } = require("./dbRequest/post")
-const { getTokenByJti, revokeToken, insertToken } = require("./dbRequest/tokenManager");
-const { error } = require("console");
+import { getUsers, getUserPasswordAndId } from './dbRequest/get.js';
+import { insertUser } from './dbRequest/post.js';
+import { getTokenByJti, revokeToken, insertToken } from './dbRequest/tokenManager.js';
+import { error } from 'console';
 
 app.use(cookieParser());
 app.use(corsMiddleware);
@@ -28,9 +28,9 @@ app.options(/^.*$/, cors(corsOptions)); // enable pre-flight for all routes
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
 try {
-    init.initUserDB();
-    init.initAuthManagementDB();
-    init.initUserDataDB();
+    initUserDB();
+    initAuthManagementDB();
+    initUserDataDB();
 } catch (error) {
     console.error("Error initializing database:", error);
 }
@@ -108,7 +108,7 @@ app.post('/refresh', async (req, res) => {
             return res.status(403).json({ error: 'forbidden' })
         }
     } catch (error) {
-        console.error('refresh error:', e)
+        console.error('refresh error:', error)
         return res.status(401).json({ error: 'Invalid refresh' })
     }
 })
@@ -124,7 +124,7 @@ app.post('/logout', async (req, res) => {
         }
     } finally {
         res.clearCookie('refreshToken', { path: '/' })
-        res.status(204).end
+        res.status(204).end()
     }
 })
 
@@ -141,6 +141,8 @@ app.get("/users", (req, res) => {
     const users = getUsers()
     res.send(users)
 });
+
+app.get('/healthz', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 async function sendTokenToDb(user_id) {
 
@@ -168,18 +170,22 @@ async function sendTokenToDb(user_id) {
     }
 }
 
-; (async () => {
-    try {
-        await initKeys();
+export default app
 
-        const key = utils.fromBase64('LOCALHOST_CERT_KEY_PATH');
-        const cert = utils.fromBase64('LOCALHOST_CERT_CRT_PATH');
+if (process.env.RUNTIME !== 'lambda') {
+    ; (async () => {
+        try {
+            await initKeys();
 
-        https.createServer({ key, cert }, app).listen(port, () => {
-            console.log(`HTTPS server running on https://localhost:${port}`);
-        });
-    } catch (err) {
-        console.error("Failed to init JWT keys:", err);
-        process.exit(1);
-    }
-})();
+            const key = fromBase64('LOCALHOST_CERT_KEY_PATH');
+            const cert = fromBase64('LOCALHOST_CERT_CRT_PATH');
+
+            https.createServer({ key, cert }, app).listen(port, () => {
+                console.log(`HTTPS server running on https://localhost:${port}`);
+            });
+        } catch (err) {
+            console.error("Failed to init JWT keys:", err);
+            process.exit(1);
+        }
+    })();
+}

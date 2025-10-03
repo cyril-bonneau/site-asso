@@ -1,0 +1,32 @@
+service: site-asso
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x         # sûr et supporté
+  region: eu-west-3           # Paris
+  architecture: x86_64        # safe pour futurs binaires natifs
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 12
+  environment:
+    NODE_OPTIONS: '--enable-source-maps'
+    RUNTIME: 'lambda'
+
+functions:
+  hello:
+    handler: backend/hello.handler
+    events:
+      - httpApi:
+          method: GET
+          path: /hello
+
+# On n’emballe PAS encore Express pour éviter better-sqlite3 côté Lambda à ce stade.
+# (Étape 2B: on ajoutera la route proxy ANY -> backend/lambda.handler)
+package:
+  patterns:
+    - 'backend/**'
+    - '!**/*.map'
+    - '!**/node_modules/.cache/**'
+    - '!**/.git/**'
+    - '!**/.vscode/**'

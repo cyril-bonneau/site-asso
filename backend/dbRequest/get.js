@@ -1,7 +1,7 @@
-const Database = require('better-sqlite3')
-const db = new Database('app.db')
+import Database from 'better-sqlite3';
+const db = new Database('app.db');
 
-function getUsers(userId) {
+export function getUsers(userId) {
     try {
         const data = db.prepare('SELECT email FROM users WHERE user_id= ?');
         const result = data.get(userId);
@@ -11,7 +11,7 @@ function getUsers(userId) {
     }
 }
 
-async function getUserPasswordAndId(email) {
+export async function getUserPasswordAndId(email) {
     try {
         const data = db.prepare('SELECT id, password FROM users WHERE email= ?');
         const result = data.get(email);
@@ -20,7 +20,8 @@ async function getUserPasswordAndId(email) {
         console.error("Error getting user by email:", error);
     }
 }
-function getUserId(token) {
+
+export function getUserId(token) {
     try {
         const data = db.prepare('SELECT user_id FROM refresh_tokens WHERE token_hash= ?');
         const result = data.get(token);
@@ -30,17 +31,10 @@ function getUserId(token) {
     }
 }
 
-function getKilometers(id) {
-    try {
-        db.prepare(`SELECT odometer_end FROM vehicle_mileage WHERE user_id=${id}`).run();
-    } catch (error) {
-        console.error("Error getting kilometers:", error);
-    }
-}
-
-module.exports = {
-    getUsers,
-    getKilometers,
-    getUserId,
-    getUserPasswordAndId
-}
+// function getKilometers(id) {
+//     try {
+//         db.prepare(`SELECT odometer_end FROM vehicle_mileage WHERE user_id=${id}`).run();
+//     } catch (error) {
+//         console.error("Error getting kilometers:", error);
+//     }
+// }

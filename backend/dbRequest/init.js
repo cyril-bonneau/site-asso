@@ -1,8 +1,8 @@
-const Database = require('better-sqlite3')
-const db = new Database('app.db')
+import Database from 'better-sqlite3';
+const db = new Database('app.db');
 
 //creation of table
-function initUserDB() {
+export function initUserDB() {
     try {
         db.prepare(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,7 +16,7 @@ function initUserDB() {
     }
 }
 
-function initAuthManagementDB() {
+export function initAuthManagementDB() {
     try {
         db.prepare(`CREATE TABLE IF NOT EXISTS refresh_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +33,7 @@ function initAuthManagementDB() {
     }
 }
 
-function initUserDataDB() {
+export function initUserDataDB() {
     try {
         db.prepare(`CREATE TABLE IF NOT EXISTS vehicle_mileage (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,10 +46,4 @@ function initUserDataDB() {
         console.error("Error creating table:", error);
         return error
     }
-}
-
-module.exports = {
-    initUserDB,
-    initAuthManagementDB,
-    initUserDataDB,
 } 

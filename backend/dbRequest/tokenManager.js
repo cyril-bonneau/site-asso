@@ -1,7 +1,7 @@
-const Database = require('better-sqlite3')
-const db = new Database('app.db')
+import Database from 'better-sqlite3';
+const db = new Database('app.db');
 
-function insertToken(data) {
+export function insertToken(data) {
     try {
         const stmt = db.prepare('INSERT INTO refresh_tokens (user_id, token_hash, expires_at, revoked, created_at, jti) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)');
         const info = stmt.run(data.user_id, data.token_hash, data.expires_at, data.revoked, data.jti);
@@ -13,7 +13,7 @@ function insertToken(data) {
     }
 }
 
-async function revokeToken(data) {
+export async function revokeToken(data) {
     try {
         const stmt = db.prepare('UPDATE refresh_tokens SET revoked = ? WHERE jti = ?');
         const info = stmt.run(data.revoked, data.jti);
@@ -25,7 +25,7 @@ async function revokeToken(data) {
     }
 }
 
-async function getTokenByJti(jti) {
+export async function getTokenByJti(jti) {
     try {
         const stmt = db.prepare('SELECT token_hash, revoked FROM refresh_tokens WHERE jti = ?');
         const token = stmt.get(jti);
@@ -34,10 +34,4 @@ async function getTokenByJti(jti) {
         console.error("Error getting refresh token by hash:", error);
         return
     }
-}
-
-module.exports = {
-    revokeToken,
-    getTokenByJti,
-    insertToken
 }
