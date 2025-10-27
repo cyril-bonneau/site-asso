@@ -14,30 +14,50 @@ const port = process.env.PORT
 const app = express()
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
-import { initUserDB, initAuthManagementDB, initUserDataDB } from './dbRequest/init.js';
 import { fromBase64 } from './utils/convert.js'
 
-import { getUsers, getUserPasswordAndId } from './dbRequest/get.js';
-import { insertUser } from './dbRequest/post.js';
-import { getTokenByJti, revokeToken, insertToken } from './dbRequest/tokenManager.js';
-import { error } from 'console';
+import { pingDdb, table as DDB_TABLE } from './dal/dynamo.js';
+import getUserByEmailRoute from "./routes/ddb/getUserByEmail.js";
+import { get } from 'http';
+
+const isLambda = process.env.RUNTIME === 'lambda'
 
 app.use(cookieParser());
 app.use(corsMiddleware);
 app.options(/^.*$/, cors(corsOptions)); // enable pre-flight for all routes
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
-try {
-    initUserDB();
-    initAuthManagementDB();
-    initUserDataDB();
-} catch (error) {
-    console.error("Error initializing database:", error);
+if (!isLambda) {
+    const { initUserDB, initAuthManagementDB, initUserDataDB } = await import('./dbRequest/init.js');
+    initUserDB(); initAuthManagementDB(); initUserDataDB();
 }
 
+app.use((req, res, next) => {
+    const isLambda = process.env.RUNTIME === 'lambda';
+    if (!isLambda) return next();
+    if (req.path === '/healthz' || req.path === '/ddb/ping' || req.path === '/ddb/user' || req.path === '/ddb/adduser') return next(); // autorisées
+    return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
+});
+
+app.get('/ddb/ping', async (_req, res) => {
+    try {
+        const r = await pingDdb();
+        res.json({ ok: true, table: DDB_TABLE, ping: r });
+    } catch (e) {
+        console.error('ddb/ping error:', e);
+        res.status(500).json({ error: 'ddb ping failed', message: e.message });
+    }
+});
+
+app.use('/ddb/user', getUserByEmailRoute);
+
+app.use('/ddb/adduser', getUserByEmailRoute);
+
 app.post("/register", async (req, res) => {
+    if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
     const data = req.body
     req.body.password = await hashPassword(req.body.password)
+    const { insertUser } = await import('./dbRequest/post.js');
     const result = await insertUser(data)
     if (result instanceof Error) {
         if (result.message.includes("UNIQUE constraint failed: users.email")) {
@@ -53,7 +73,9 @@ app.post("/register", async (req, res) => {
 })
 
 app.post("/login", async (req, res) => {
+    if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
     const { email, password } = req.body
+    const { getUserPasswordAndId } = await import('./dbRequest/get.js');
     const result = await getUserPasswordAndId(email)
 
     if (!result) {
@@ -77,6 +99,7 @@ app.post("/login", async (req, res) => {
 })
 
 app.post('/refresh', async (req, res) => {
+    if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
     try {
         const { refreshToken } = req.cookies;
         if (!refreshToken) {
@@ -84,7 +107,7 @@ app.post('/refresh', async (req, res) => {
         }
         const payload = await getRefreshTokenData(refreshToken); //récupère les donnèes du token, obtiens le jti
         const user_id = payload.sub;
-
+        const { getTokenByJti } = await import('./dbRequest/tokenManager.js');
         const tokenHash = await getTokenByJti(payload.jti); //récupère le hash grace au jti
         if (!tokenHash || tokenHash.revoked) {
             return res.status(401).json({ error: 'Invalid refresh token' });
@@ -93,9 +116,12 @@ app.post('/refresh', async (req, res) => {
         const hash = await hashToken(refreshToken)
 
         if (hash === tokenHash.token_hash) {
+            const { revokeToken } = await import('./dbRequest/tokenManager.js');
             const result = await revokeToken({ jti: payload.jti, revoked: 1 });
-            console.log('je passe dedans')
-            console.log(result)
+            if (result instanceof Error) {
+                return res.status(500).json({ error: 'Error revoking token' });
+            }
+            const { sendTokenToDb } = await import('./index.js');
             const { refreshToken, accessToken } = await sendTokenToDb(user_id)
 
             res.cookie('refreshToken', refreshToken, {
@@ -119,6 +145,7 @@ app.post('/logout', async (req, res) => {
         if (refreshToken) {
             const tokenData = await getRefreshTokenData(refreshToken).catch(() => null)
             if (tokenData?.jti) {
+                const { revokeToken } = await import('./dbRequest/tokenManager.js');
                 await revokeToken(tokenData.jti)
             }
         }
@@ -128,23 +155,28 @@ app.post('/logout', async (req, res) => {
     }
 })
 
-app.post("/mileage", (req, res) => {
-    const data = req.body.kilometers
-    const result = insertKilometers(data)
-    if (result instanceof Error) {
-        res.status(500).send("Error inserting data")
-        return
-    }
-})
+// app.post("/mileage", (req, res) => {
+//     if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
+//     const data = req.body.kilometers
+//     const result = insertKilometers(data)
+//     if (result instanceof Error) {
+//         res.status(500).send("Error inserting data")
+//         return
+//     }
+// })
 
-app.get("/users", (req, res) => {
-    const users = getUsers()
-    res.send(users)
-});
+// app.get("/users", async (req, res) => {
+//     if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
+//     const { getUsers } = await import('./dbRequest/get.js');
+//     const users = getUsers()
+//     res.send(users)
+// });
 
 app.get('/healthz', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 async function sendTokenToDb(user_id) {
+
+    if (isLambda) throw new Error('DB disabled in Lambda');
 
     const jti = crypto.randomUUID();
     const accessToken = await signAccessToken(user_id);
@@ -158,6 +190,7 @@ async function sendTokenToDb(user_id) {
         jti: jti
     };
 
+    const { insertToken } = await import('./dbRequest/tokenManager.js');
     const dbResult = insertToken(payload);
     console.log(refreshToken)
     console.log(accessToken)

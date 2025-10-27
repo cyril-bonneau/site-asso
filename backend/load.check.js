@@ -1,0 +1,1 @@
+import './index.js'; console.log('OK: app loaded');

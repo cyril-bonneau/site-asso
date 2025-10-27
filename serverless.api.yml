@@ -1,0 +1,98 @@
+service: site-asso-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: eu-west-3
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 12
+  environment:
+    NODE_OPTIONS: '--enable-source-maps'
+    RUNTIME: 'lambda'
+    # Récupère la table depuis la stack infra (via Outputs)
+    DDB_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTableName}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:BatchWriteItem
+            - dynamodb:TransactWriteItems
+            - dynamodb:TransactGetItems
+          Resource:
+            - ${cf:site-asso-infra-${sls:stage}.DdbTableArn}
+            - ${cf:site-asso-infra-${sls:stage}.DdbTableArn}/index/*
+
+plugins:
+  - ./backend/node_modules/serverless-esbuild
+custom:
+  esbuild:
+    bundle: true
+    platform: node
+    target: node20
+    format: esm            # <-- clé : passe en ESM
+    sourcemap: true
+    minify: false
+    external: []           # bundle tout (évite les “missing module”)
+    mainFields:
+      - module
+      - main
+    banner:
+      js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
+
+functions:
+  api:
+    handler: backend/lambda/lambda.handler
+    events:
+      - httpApi: 
+          method: '*'
+          path: /api
+      - httpApi:
+          method: '*'
+          path: /api/{proxy+}
+
+  hello:
+    handler: backend/lambda/hello.handler
+    events:
+      - httpApi: 
+          method: GET
+          path: /hello
+
+  addUser:
+    handler: backend/lambda/addUserLambda.handler
+    events:
+      - httpApi: 
+          method: PUT
+          path: /addUser
+
+  getUser:
+    handler: backend/lambda/getUserLambda.handler
+    events:
+      - httpApi: 
+          method: GET
+          path: /getUser
+
+  updateUser:
+    handler: backend/lambda/updateUserLambda.handler
+    events:
+      - httpApi: 
+          method: PUT
+          path: /updateUser/{id}
+
+package:
+  patterns:
+    - backend/**
+    - backend/lambda/**
+    - '!**/.git/**'
+    - '!**/.vscode/**'
+    - '!**/*.map'
+
