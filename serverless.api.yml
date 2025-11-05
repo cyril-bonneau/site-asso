@@ -12,7 +12,8 @@ provider:
     NODE_OPTIONS: '--enable-source-maps'
     RUNTIME: 'lambda'
     # Récupère la table depuis la stack infra (via Outputs)
-    DDB_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTableName}
+    DDB_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+    AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
 
   iam:
     role:
@@ -28,12 +29,15 @@ provider:
             - dynamodb:BatchWriteItem
             - dynamodb:TransactWriteItems
             - dynamodb:TransactGetItems
+            - dynamodb:ConditionCheckItem
           Resource:
-            - ${cf:site-asso-infra-${sls:stage}.DdbTableArn}
-            - ${cf:site-asso-infra-${sls:stage}.DdbTableArn}/index/*
+            - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+            - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
 
 plugins:
   - ./backend/node_modules/serverless-esbuild
+  - serverless-iam-roles-per-function
+
 custom:
   esbuild:
     bundle: true
@@ -86,7 +90,68 @@ functions:
     events:
       - httpApi: 
           method: PUT
-          path: /updateUser/{id}
+          path: /updateUser
+
+  registerUser:
+    handler: backend/lambda/registerUserLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:TransactWriteItems
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+    events:
+      - httpApi: 
+          method: PUT
+          path: /registerUser
+
+  onAuthStream:
+    handler: backend/lambda/onAuthStream.handler
+    architecture: arm64           # ARM64 conseillé
+    memorySize: 1024              # 1024–1536 Mo pour marge CPU
+    timeout: 30
+    environment:
+      USERS_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+    events:
+      - stream:
+          type: dynamodb
+          arn: ${cf:site-asso-infra-${sls:stage}.DdbAuthStreamArn}  # <- Output ARN du stream
+          batchSize: 10
+          startingPosition: LATEST
+          maximumRetryAttempts: 3
+          bisectBatchOnFunctionError: true
+          destinations:
+            onFailure:
+              type: sqs
+              arn:
+                Fn::GetAtt: [ AuthStreamDLQ, Arn ]
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:ConditionCheckItem
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - sqs:SendMessage
+          - sqs:GetQueueAttributes
+        Resource:
+          - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
+
+resources:
+  Resources:
+    AuthStreamDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-authstream-dlq
 
 package:
   patterns:

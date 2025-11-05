@@ -30,7 +30,7 @@ function parseTxCancel(err) {
  * - Retry (jusqu'à MAX_ID_RETRIES) si collision d'ID
  * - INTERNAL_ERROR sinon
  */
-export async function createUserWithUniqueEmail({ email, firstName, lastName, maxIdRetries = 3 }) {
+async function createUserWithUniqueEmail({ email, firstName, lastName, maxIdRetries = 3 }) {
     const normalizedEmail = String(email).trim().toLowerCase();
 
     for (let attempt = 0; attempt < maxIdRetries; attempt++) {
@@ -47,8 +47,7 @@ export async function createUserWithUniqueEmail({ email, firstName, lastName, ma
         const userItem = {
             PK: { S: `USER#${id}` },
             SK: { S: `PROFILE#${id}` },
-            GSI1PK: { S: "USER#EMAIL" },
-            GSI1SK: { S: normalizedEmail },
+            GSI1PK: { S: normalizedEmail },
             userId: { S: id },
             email: { S: normalizedEmail },
             firstName: firstName ? { S: String(firstName) } : { NULL: true },

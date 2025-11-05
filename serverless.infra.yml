@@ -36,12 +36,49 @@ resources:
           AttributeName: TTL
           Enabled: true
 
+    AssoAuthTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: site-asso-${sls:stage}-asso-auth
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S }   # EMAIL#<email>
+          - { AttributeName: SK, AttributeType: S }   # AUTH
+          - { AttributeName: GSI1, AttributeType: S }   # USER#<userId>
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH }
+          - { AttributeName: SK, KeyType: RANGE }
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - { AttributeName: GSI1, KeyType: HASH }
+              - { AttributeName: SK,   KeyType: RANGE }
+            Projection: { ProjectionType: ALL }
+        TimeToLiveSpecification:
+          AttributeName: TTL
+          Enabled: true
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+
   Outputs:
-    DdbTableName:
+    DdbUserTable:
       Value: !Ref AssoMainTable
       Export:
-        Name: site-asso-infra-${sls:stage}-DdbTableName
-    DdbTableArn:
+        Name: site-asso-infra-${sls:stage}-DdbUserTable
+    DdbUserTableArn:
       Value: !GetAtt AssoMainTable.Arn
       Export:
-        Name: site-asso-infra-${sls:stage}-DdbTableArn
+        Name: site-asso-infra-${sls:stage}-DdbUserTableArn
+
+    DdbAuthTableName:
+      Value: !Ref AssoAuthTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAuthTableName
+    DdbAuthTableArn:
+      Value: !GetAtt AssoAuthTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAuthTableArn
+    DdbAuthStreamArn:
+      Value: !GetAtt AssoAuthTable.StreamArn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAuthStreamArn
