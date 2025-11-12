@@ -2,10 +2,10 @@ import {
     DynamoDBClient
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import argon2 from 'argon2';
 import { nanoid } from "nanoid";
 
-const USER_TABLE = process.env.DDB_TABLE;
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -16,15 +16,27 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 
 export const handler = async (event) => {
     try {
-        const data = JSON.parse(event.body);
+        const { email, password } = JSON.parse(event.body);
 
-        const res = await createAuthEntry(data.email, data.password);
+        const check = await validatePasswordBackend(password, {
+            email,
+            // username: data.username,
+            useHIBP: true // ou false si tu veux éviter l'appel externe
+        });
 
-        if (res.statusCode !== 200 && res.statusCode !== 201) {
-            return json(res.statusCode, { ok: false, message: res })
+        if (!check.ok) {
+            return {
+                statusCode: 422,
+                body: JSON.stringify({ ok: false, code: "WEAK_PASSWORD", reasons: check.reasons })
+            };
         }
 
-        return json(res.statusCode, { ok: true, message: res.message });
+        const res = await createAuthEntry(email, password);
+
+        if (res.statusCode === 200) return json(201, { ok: true, message: res.message });
+
+        return json(res.statusCode, { ok: false, ...res })
+
 
     } catch (err) {
         return {
@@ -41,6 +53,7 @@ async function createAuthEntry(email, password) {
     const maxIdRetries = 3;
     for (let attempt = 0; attempt < maxIdRetries; attempt++) {
         const id = nanoid();
+        const now = new Date().toISOString()
 
         const transaction = []
 
@@ -50,49 +63,31 @@ async function createAuthEntry(email, password) {
                 Item: {
                     PK: `EMAIL#${normalizedEmail}`,
                     SK: "UNIQUE",
-                    GSI1PK: `USER#${id}`,
-                    GSI1SK: "UNIQUE",
-                    id: id,
-                    email: normalizedEmail,
-                    passwordHash: hashedPwd,
-                    createdAt: new Date().toISOString(),
+                    userId: `USER#${id}`,
+                    createdAt: now,
                 },
-                ConditionExpression: "attribute_not_exists(id)",
+                ConditionExpression: "attribute_not_exists(PK)",
                 ReturnValuesOnConditionCheckFailure: "ALL_OLD",
             }
         });
 
         transaction.push({
             Put: {
-                TableName: USER_TABLE,
+                TableName: AUTH_TABLE,
                 Item: {
-                    PK: `EMAIL#${normalizedEmail}`,
-                    SK: "UNIQUE",
+                    PK: `USER#${id}`,
+                    SK: "AUTH",
                     userId: id,
-                    GSI1SK: normalizedEmail,
-                    createdAt: new Date().toISOString(),
+                    GSI1PK: `EMAIL#${normalizedEmail}`,
+                    GSI1SK: `USER#${id}`,
+                    email: normalizedEmail,
+                    passwordHash: hashedPwd,
+                    createdAt: now,
                 },
                 ConditionExpression: "attribute_not_exists(PK)",
                 ReturnValuesOnConditionCheckFailure: "ALL_OLD",
             },
         });
-
-        transaction.push({
-            Put: {
-                TableName: USER_TABLE,
-                Item: {
-                    PK: `USER#${id}`,
-                    SK: `PROFILE#${id}`,
-                    GSI1PK: "USER#EMAIL",
-                    GSI1SK: normalizedEmail,
-                    email: normalizedEmail,
-                    userId: id,
-                    createdAt: new Date().toISOString(),
-                },
-                ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
-                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-            }
-        })
 
         try {
             const response = await ddb.send(new TransactWriteCommand({
@@ -101,7 +96,8 @@ async function createAuthEntry(email, password) {
                 ReturnConsumedCapacity: "TOTAL",
             }));
 
-            if (response.$metadata.httpStatusCode === 201 || response.$metadata.httpStatusCode === 200) {
+            if (response.$metadata.httpStatusCode === 200) {
+                console.log("createAuthEntry success", { email: normalizedEmail, userId: id })
                 return {
                     statusCode: response.$metadata.httpStatusCode,
                     message: "user successfully created"
@@ -119,20 +115,20 @@ async function createAuthEntry(email, password) {
                 }));
 
                 const emailCheck = reasons.find(r => r.index === 0);
-                const emailCheck2 = reasons.find(r => r.index === 1);
 
-                if (emailCheck.code === "ConditionalCheckFailed" || emailCheck2.code === "ConditionalCheckFailed") {
-                    return { statusCode: 403, error: "EMAIL_ALREADY_EXISTS" }
+                if (emailCheck && emailCheck.code === "ConditionalCheckFailed") {
+                    return { statusCode: 409, error: "EMAIL_ALREADY_EXISTS" }
                 }
 
-                const checkId = reasons.find(r => r.index === 2);
+                const checkId = reasons.find(r => r.index === 1);
 
-                if (checkId.code === "ConditionalCheckFailed") {
+                if (checkId && checkId.code === "ConditionalCheckFailed") {
                     console.error("ID_COLLISION RETRYING...");
                     if (attempt < maxIdRetries - 1) {
                         await new Promise(r => setTimeout(r, 25 * (attempt + 1)));
                         continue;
                     }
+                    console.log({ error: "ID_COLLISION" })
                     throw { statusCode: 409, error: "ID_COLLISION" }
                 };
             }
@@ -151,7 +147,7 @@ async function hashPassword(pwd) {
     });
 }
 
-async function json(statusCode, body) {
+function json(statusCode, body) {
     return {
         statusCode,
         headers: { "content-type": "application/json" },
