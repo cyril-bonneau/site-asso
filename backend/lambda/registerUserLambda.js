@@ -5,6 +5,7 @@ import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynam
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import argon2 from 'argon2';
 import { nanoid } from "nanoid";
+import { withRateLimit } from "../rateLimit/withRateLimit.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
@@ -14,7 +15,20 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 
 // event must contain email, password in body
 
-export const handler = async (event) => {
+export const handler = withRateLimit(registerUserCore, {
+    scope: "REGISTER",     // nom logique de l’action
+    capacity: 3,
+    refillRate: 0.1,       // 1 token / 10 s
+    cost: 1,
+    keyFromEvent: (event) => {
+        // avant auth: mieux vaut l’IP
+        const ip = event?.requestContext?.http?.sourceIp
+            || event?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim();
+        return ip || "unknown";
+    }
+})
+
+async function registerUserCore(event) {
     try {
         const { email, password } = JSON.parse(event.body);
 

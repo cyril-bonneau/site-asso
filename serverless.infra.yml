@@ -39,28 +39,49 @@ resources:
     AssoAuthTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: site-asso-${sls:stage}-asso-auth
+        TableName: site-asso-${sls:stage}-asso-auth-v2
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - { AttributeName: PK, AttributeType: S }   # EMAIL#<email>
           - { AttributeName: SK, AttributeType: S }   # AUTH
-          - { AttributeName: GSI1, AttributeType: S }   # USER#<userId>
+          - { AttributeName: GSI1PK, AttributeType: S }   # USER#<userId>
+          - { AttributeName: GSI1SK, AttributeType: S }
         KeySchema:
           - { AttributeName: PK, KeyType: HASH }
           - { AttributeName: SK, KeyType: RANGE }
         GlobalSecondaryIndexes:
-          - IndexName: GSI1
+          - IndexName: GSI1v2
             KeySchema:
-              - { AttributeName: GSI1, KeyType: HASH }
-              - { AttributeName: SK,   KeyType: RANGE }
-            Projection: { ProjectionType: ALL }
+              - { AttributeName: GSI1PK, KeyType: HASH }
+              - { AttributeName: GSI1SK,   KeyType: RANGE }
+            Projection: 
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - PK
+                - SK
+                - userId
+                - createdAt
         TimeToLiveSpecification:
           AttributeName: TTL
           Enabled: true
         StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
 
+    RateLimitTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: site-asso-${sls:stage}-rate-limit
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S } #RL#IP#xxx.x.xxx.x/RL#USER#xxxxxxxxxxx
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH }
+        TimeToLiveSpecification:
+          AttributeName: TTL
+          Enabled: true
+
   Outputs:
+
     DdbUserTable:
       Value: !Ref AssoMainTable
       Export:
@@ -82,3 +103,12 @@ resources:
       Value: !GetAtt AssoAuthTable.StreamArn
       Export:
         Name: site-asso-infra-${sls:stage}-DdbAuthStreamArn
+
+    DdbRateLimitTable:
+      Value: !Ref RateLimitTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbRateLimitTable
+    DdbRateLimitTableArn:
+      Value: !GetAtt RateLimitTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbRateLimitTableArn

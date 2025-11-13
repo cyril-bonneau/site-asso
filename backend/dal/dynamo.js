@@ -3,7 +3,7 @@ import { ddbDocClient } from "./client.js";
 import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { nanoid } from 'nanoid';
 
-export const table = process.env.DDB_TABLE;              // vient de serverless.api.yml
+export const table = process.env.USER_TABLE;              // vient de serverless.api.yml
 const ddb = new DynamoDBClient({});                      // region/creds via rôle Lambda
 export const doc = DynamoDBDocumentClient.from(ddb, {
     marshallOptions: { removeUndefinedValues: true }

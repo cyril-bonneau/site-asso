@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "serverless-apigateway-route-settings": "^1.1.0",
     "serverless-iam-roles-per-function": "^3.2.0"
   }
 }

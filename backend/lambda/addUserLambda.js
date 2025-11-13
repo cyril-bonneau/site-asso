@@ -5,7 +5,7 @@ import {
     TransactWriteItemsCommand,
 } from "@aws-sdk/client-dynamodb";
 
-const TABLE = process.env.DDB_TABLE;
+const TABLE = process.env.USER_TABLE;
 const ddb = new DynamoDBClient({});
 
 const isoNow = () => new Date().toISOString();

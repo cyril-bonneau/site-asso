@@ -3,7 +3,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 
-const TABLE = process.env.DDB_TABLE;
+const TABLE = process.env.USER_TABLE;
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });

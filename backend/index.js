@@ -16,7 +16,7 @@ import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { fromBase64 } from './utils/convert.js'
 
-import { pingDdb, table as DDB_TABLE } from './dal/dynamo.js';
+import { pingDdb, table as USER_TABLE } from './dal/dynamo.js';
 import getUserByEmailRoute from "./routes/ddb/getUserByEmail.js";
 import { get } from 'http';
 
@@ -27,10 +27,10 @@ app.use(corsMiddleware);
 app.options(/^.*$/, cors(corsOptions)); // enable pre-flight for all routes
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json())
-if (!isLambda) {
-    const { initUserDB, initAuthManagementDB, initUserDataDB } = await import('./dbRequest/init.js');
-    initUserDB(); initAuthManagementDB(); initUserDataDB();
-}
+// if (!isLambda) {
+//     const { initUserDB, initAuthManagementDB, initUserDataDB } = await import('./dbRequest/init.js');
+//     initUserDB(); initAuthManagementDB(); initUserDataDB();
+// }
 
 app.use((req, res, next) => {
     const isLambda = process.env.RUNTIME === 'lambda';
@@ -42,7 +42,7 @@ app.use((req, res, next) => {
 app.get('/ddb/ping', async (_req, res) => {
     try {
         const r = await pingDdb();
-        res.json({ ok: true, table: DDB_TABLE, ping: r });
+        res.json({ ok: true, table: USER_TABLE, ping: r });
     } catch (e) {
         console.error('ddb/ping error:', e);
         res.status(500).json({ error: 'ddb ping failed', message: e.message });
@@ -52,51 +52,6 @@ app.get('/ddb/ping', async (_req, res) => {
 app.use('/ddb/user', getUserByEmailRoute);
 
 app.use('/ddb/adduser', getUserByEmailRoute);
-
-app.post("/register", async (req, res) => {
-    if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
-    const data = req.body
-    req.body.password = await hashPassword(req.body.password)
-    const { insertUser } = await import('./dbRequest/post.js');
-    const result = await insertUser(data)
-    if (result instanceof Error) {
-        if (result.message.includes("UNIQUE constraint failed: users.email")) {
-            res.status(400).json({ error: "Email_already_exists" })
-        } else {
-            res.status(500).send("Error inserting data")
-        }
-    } else {
-        res.send(result)
-        console.log(`Your Email is ${data.email} and your password is ${data.password}`)
-        console.log(`(alg=${process.env.JWT_ALG})`)
-    }
-})
-
-app.post("/login", async (req, res) => {
-    if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });
-    const { email, password } = req.body
-    const { getUserPasswordAndId } = await import('./dbRequest/get.js');
-    const result = await getUserPasswordAndId(email)
-
-    if (!result) {
-        return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    const isSame = await verifyPassword(result.password, password)
-
-    if (!isSame) {
-        return res.status(401).json({ error: "Invalid email or password" });
-    } else {
-        const { refreshToken, accessToken } = await sendTokenToDb(result.id)
-
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        }).status(200).json({ accessToken });
-    }
-})
 
 app.post('/refresh', async (req, res) => {
     if (isLambda) return res.status(501).json({ error: 'DB disabled in Lambda (Step 2B). Try /api/healthz.' });

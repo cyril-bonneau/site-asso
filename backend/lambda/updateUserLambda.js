@@ -4,12 +4,14 @@ import {
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { buildDynUpdate } from "../helpers/updateUser.js";
 
-const TABLE = process.env.DDB_TABLE;
+const USER_TABLE = process.env.USER_TABLE;
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
 
-// event must contain userId in pathParameters and fields to update in body (if email is to be updated, use oldEmail and newEmail field)
+// event must contain userId in pathParameters and fields to update in body 
+// (if email is to be updated, use oldEmail and newEmail field)
+
 export const handler = async (event) => {
     try {
         const data = JSON.parse(event.body);
@@ -44,7 +46,7 @@ async function updateUser(data, id) {
         TransactItems: [
             {
                 Update: {
-                    TableName: TABLE,
+                    TableName: USER_TABLE,
                     Key: {
                         PK: `USER#${id}`,
                         SK: `PROFILE#${id}`,
@@ -60,8 +62,6 @@ async function updateUser(data, id) {
 
 async function updateUserEmail(data, id) {
 
-    console.log("data contain what ?", data);
-
     const oldEmail = data?.oldEmail;
     const normalizedNewEmail = String(data?.newEmail).trim().toLowerCase();
 
@@ -69,7 +69,7 @@ async function updateUserEmail(data, id) {
 
     transaction.push({
         Update: {
-            TableName: TABLE,
+            TableName: USER_TABLE,
             Key: { PK: `USER#${id}`, SK: `PROFILE#${id}` },
             UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #updatedAt = :updatedAt`,
             ExpressionAttributeNames: {
