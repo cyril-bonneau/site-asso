@@ -43,7 +43,7 @@ provider:
 
 plugins:
   - ./backend/node_modules/serverless-esbuild
-  - serverless-iam-roles-per-function
+  - ./backend/node_modules/serverless-iam-roles-per-function
 
 custom:
   esbuild:
