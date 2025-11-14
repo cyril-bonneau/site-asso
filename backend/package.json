@@ -28,7 +28,6 @@
     "sanitize-html": "^2.17.0",
     "serverless-http": "^4.0.0",
     "uuid": "^11.1.0",
-    "validator": "^13.15.15",
     "zod": "^4.1.12"
   },
   "devDependencies": {
