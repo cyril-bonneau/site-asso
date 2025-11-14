@@ -1,6 +1,9 @@
 service: site-asso-api
 frameworkVersion: '4'
 
+org: wolfcorp
+app: site-asso
+
 provider:
   name: aws
   runtime: nodejs20.x

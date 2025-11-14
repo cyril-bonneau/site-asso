@@ -1,6 +1,9 @@
 service: site-asso-infra
 frameworkVersion: '4'
 
+org: wolfcorp
+app: site-asso
+
 provider:
   name: aws
   region: eu-west-3
