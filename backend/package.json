@@ -5,9 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon index.js",
-    "start:lambda-check": "cross-env RUNTIME=lambda node lambda-check.js"
+    "start:lambda-check": "cross-env RUNTIME=lambda node lambda-check.js",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
   },
   "author": "",
   "license": "ISC",
@@ -31,9 +33,11 @@
   },
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "^4.0.1",
+    "@vitest/coverage-v8": "^4.0.8",
     "nodemon": "^3.1.10",
     "serverless": "^4.20.2",
-    "serverless-esbuild": "^1.55.1"
+    "serverless-esbuild": "^1.55.1",
+    "vitest": "^4.0.8"
   },
   "overrides": {
     "debug": "4.4.1",
