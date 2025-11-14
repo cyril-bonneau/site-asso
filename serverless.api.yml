@@ -41,7 +41,6 @@ provider:
 plugins:
   - ./backend/node_modules/serverless-esbuild
   - serverless-iam-roles-per-function
-  - serverless-apigateway-route-settings
 
 custom:
   esbuild:
