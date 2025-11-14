@@ -62,7 +62,7 @@ custom:
 
 functions:
   api:
-    handler: backend/lambda/lambda.handler
+    handler: lambda/lambda.handler
     events:
       - httpApi: 
           method: '*'
@@ -72,14 +72,14 @@ functions:
           path: /api/{proxy+}
 
   hello:
-    handler: backend/lambda/hello.handler
+    handler: lambda/hello.handler
     events:
       - httpApi: 
           method: GET
           path: /hello
 
   addUser:
-    handler: backend/lambda/addUserLambda.handler
+    handler: lambda/addUserLambda.handler
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -93,7 +93,7 @@ functions:
           path: /addUser
 
   getUser:
-    handler: backend/lambda/getUserLambda.handler
+    handler: lambda/getUserLambda.handler
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -107,14 +107,14 @@ functions:
           path: /getUser
 
   updateUser:
-    handler: backend/lambda/updateUserLambda.handler
+    handler: lambda/updateUserLambda.handler
     events:
       - httpApi: 
           method: PUT
           path: /updateUser
 
   registerUser:
-    handler: backend/lambda/registerUserLambda.handler
+    handler: lambda/registerUserLambda.handler
     # reservedConcurrency: 5
     memorySize: 1024
     architecture: arm64
@@ -142,7 +142,7 @@ functions:
             rateLimit: 5
 
   removeAuthUser:
-    handler: backend/lambda/removeAuthUserLambda.handler
+    handler: lambda/removeAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
     environment:
@@ -160,7 +160,7 @@ functions:
           path: /removeAuthUser
           
   onAuthStream: #Ajout de nouveau user dans la table générale des users
-    handler: backend/lambda/onAuthStreamLambda.handler
+    handler: lambda/onAuthStreamLambda.handler
     architecture: arm64           # ARM64 conseillé
     memorySize: 1024              # 1024–1536 Mo pour marge CPU
     timeout: 30
@@ -196,7 +196,7 @@ functions:
           - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
   onRemoveAuthStream: #Ajout de nouveau user dans la table générale des users
-    handler: backend/lambda/onRemoveAuthStreamLambda.handler
+    handler: lambda/onRemoveAuthStreamLambda.handler
     architecture: arm64           # ARM64 conseillé
     memorySize: 1024              # 1024–1536 Mo pour marge CPU
     timeout: 30
