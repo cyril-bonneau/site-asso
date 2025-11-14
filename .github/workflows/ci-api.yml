@@ -44,7 +44,7 @@ jobs:
     name: Deploy API (dev)
     needs: test
     # Ne déploie que sur la branche principale, et seulement sur les push (pas PR)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
