@@ -9,6 +9,10 @@ provider:
   region: eu-west-3
   stage: ${opt:stage, 'dev'}
 
+plugins:
+  - ./backend/node_modules/serverless-esbuild
+  - serverless-iam-roles-per-function
+
 resources:
   Resources:
     AssoMainTable:
