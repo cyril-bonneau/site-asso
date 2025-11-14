@@ -12,7 +12,6 @@ backend/keys
 # testing
 /coverage
 backend/scripts
-backend/tests
 
 # production
 /build

@@ -36,7 +36,6 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
-      # Quand tu auras de vrais tests :
       - name: Run unit tests
         working-directory: ./backend
         run: npm test
