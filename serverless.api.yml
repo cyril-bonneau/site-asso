@@ -137,9 +137,6 @@ functions:
       - httpApi: 
           method: PUT
           path: /registerUser
-          routeSettings:
-            burstLimit: 10
-            rateLimit: 5
 
   removeAuthUser:
     handler: backend/lambda/removeAuthUserLambda.handler
