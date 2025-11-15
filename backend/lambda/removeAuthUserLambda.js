@@ -17,8 +17,6 @@ export const handler = async (event) => {
         return json(400, { ok: false, error: "EMAIL_REQUIRED" });
     }
 
-    toto("test")
-
     const result = await removeAuthUser(id, email, password)
     return json(201, { ok: true, message: "User removed", ...result });
 }
@@ -84,11 +82,4 @@ function json(statusCode, body) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
     };
-}
-
-function toto(test) {
-    if (test) {
-        console.log(test)
-        console.log('hell no')
-    }
 }
