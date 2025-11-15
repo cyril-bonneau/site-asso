@@ -32,8 +32,6 @@ async function registerUserCore(event) {
     try {
         const { email, password } = JSON.parse(event.body);
 
-        console.log("juste la pour célébrer")
-
         const check = await validatePasswordBackend(password, {
             email,
             // username: data.username,
