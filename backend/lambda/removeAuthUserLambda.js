@@ -89,5 +89,6 @@ function json(statusCode, body) {
 function toto(test) {
     if (test) {
         console.log(test)
+        console.log('hell no')
     }
 }
