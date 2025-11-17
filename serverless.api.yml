@@ -142,6 +142,7 @@ functions:
         Action:
           - dynamodb:UpdateItem
           - dynamodb:DeleteItem
+          - dynamodb:PutItem
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
