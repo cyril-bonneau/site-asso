@@ -71,8 +71,7 @@ async function updateUser(data, id) {
             Item: {
                 PK: `EMAIL#${normalizedNewEmail}`,
                 SK: "UNIQUE",
-                userId: id,
-                GSI1SK: normalizedNewEmail,
+                userId: `USER#${id}`,
                 createdAt: new Date().toISOString(),
             },
             ConditionExpression: "attribute_not_exists(PK)",
@@ -87,12 +86,8 @@ async function updateUser(data, id) {
             ReturnConsumedCapacity: "TOTAL",
         }));
 
-        if (data?.firstName || data?.lastName) {
-            await updateUser(data, id);
-            return json(200, { ok: true, message: "Info updated successfully" });
-        }
-
         return result;
+
     } catch (err) {
         const errorName = err?.name || "";
         const msg = err?.message || "";
