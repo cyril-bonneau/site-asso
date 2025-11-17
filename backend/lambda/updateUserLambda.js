@@ -4,7 +4,7 @@ import {
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { buildDynUpdate } from "../helpers/updateUser.js";
 
-const USER_TABLE = process.env.USER_TABLE;
+const AUTH_TABLE = process.env.AUTH_TABLE;
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
@@ -20,11 +20,8 @@ export const handler = async (event) => {
         if (!event?.queryStringParameters?.id) {
             return json(400, { error: "MISSING_USER_ID" });
         }
-        if (data?.newEmail && data?.oldEmail !== data?.newEmail) {
-            return updateUserEmail(data, id);
-        } else {
-            return updateUser(data, id);
-        }
+
+        return updateUser(data, id);
     } catch (err) {
         console.error("Error in updateUser handler:", err);
         return {
@@ -36,32 +33,6 @@ export const handler = async (event) => {
 
 async function updateUser(data, id) {
 
-    const expr = buildDynUpdate(data, { allow: ["firstName", "lastName"] });
-
-    if (!expr) {
-        return json(400, { ok: false, message: "NO_FIELDS_TO_UPDATE" });
-    }
-
-    const result = await ddb.send(new TransactWriteCommand({
-        TransactItems: [
-            {
-                Update: {
-                    TableName: USER_TABLE,
-                    Key: {
-                        PK: `USER#${id}`,
-                        SK: `PROFILE#${id}`,
-                    },
-                    ...expr
-                }
-            }
-        ]
-    }))
-
-    return json(200, { ok: true, message: "User updated successfully", data: result.Attributes });
-}
-
-async function updateUserEmail(data, id) {
-
     const oldEmail = data?.oldEmail;
     const normalizedNewEmail = String(data?.newEmail).trim().toLowerCase();
 
@@ -69,7 +40,7 @@ async function updateUserEmail(data, id) {
 
     transaction.push({
         Update: {
-            TableName: USER_TABLE,
+            TableName: AUTH_TABLE,
             Key: { PK: `USER#${id}`, SK: `PROFILE#${id}` },
             UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #updatedAt = :updatedAt`,
             ExpressionAttributeNames: {
@@ -82,7 +53,7 @@ async function updateUserEmail(data, id) {
                 ":GSI1SK": normalizedNewEmail,
                 ":updatedAt": new Date().toISOString(),
             },
-            ConditionExpression: "attribute_exists(PK)",
+            ConditionExpression: "attribute_exists(PK) AND attribute_not_exists(email)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     });
@@ -121,7 +92,7 @@ async function updateUserEmail(data, id) {
             return json(200, { ok: true, message: "Info updated successfully" });
         }
 
-        return json(200, { ok: true, message: "Email updated successfully", result });
+        return;
     } catch (err) {
         const errorName = err?.name || "";
         const msg = err?.message || "";

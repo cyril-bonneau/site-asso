@@ -106,13 +106,6 @@ functions:
           method: GET
           path: /getUser
 
-  updateUser:
-    handler: backend/lambda/updateUserLambda.handler
-    events:
-      - httpApi: 
-          method: PUT
-          path: /updateUser
-
   registerUser:
     handler: backend/lambda/registerUserLambda.handler
     # reservedConcurrency: 5
@@ -137,6 +130,23 @@ functions:
       - httpApi: 
           method: PUT
           path: /registerUser
+
+  updateUser:
+    handler: backend/lambda/updateUserLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:TransactWriteItems
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+    events:
+      - httpApi: 
+          method: PATCH
+          path: /updateUser
 
   removeAuthUser:
     handler: backend/lambda/removeAuthUserLambda.handler
@@ -192,6 +202,41 @@ functions:
         Resource:
           - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
+  onUpdateAuthStream: #Ajout de nouveau user dans la table générale des users
+    handler: backend/lambda/onUpdateAuthStreamLambda.handler
+    architecture: arm64           # ARM64 conseillé
+    memorySize: 1024              # 1024–1536 Mo pour marge CPU
+    timeout: 30
+    environment:
+      USERS_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+    events:
+      - stream:
+          type: dynamodb
+          arn: ${cf:site-asso-infra-${sls:stage}.DdbAuthStreamArn}  # <- Output ARN du stream
+          batchSize: 10
+          startingPosition: LATEST
+          maximumRetryAttempts: 3
+          bisectBatchOnFunctionError: true
+          destinations:
+            onFailure:
+              type: sqs
+              arn:
+                Fn::GetAtt: [ AuthStreamDLQ, Arn ]
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:TransactWriteItems
+          - dynamodb:ConditionCheckItem
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - sqs:SendMessage
+          - sqs:GetQueueAttributes
+        Resource:
+          - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
+
   onRemoveAuthStream: #Ajout de nouveau user dans la table générale des users
     handler: backend/lambda/onRemoveAuthStreamLambda.handler
     architecture: arm64           # ARM64 conseillé
@@ -215,7 +260,7 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-          - dynamodb:DeleteItem
+          - dynamodb:TransactWriteItems
           - dynamodb:ConditionCheckItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
