@@ -141,6 +141,7 @@ functions:
       - Effect: Allow
         Action:
           - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
