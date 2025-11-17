@@ -41,16 +41,16 @@ async function updateUser(data, id) {
     transaction.push({
         Update: {
             TableName: AUTH_TABLE,
-            Key: { PK: `USER#${id}`, SK: `PROFILE#${id}` },
-            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #updatedAt = :updatedAt`,
+            Key: { PK: `USER#${id}`, SK: "AUTH" },
+            UpdateExpression: `SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt`,
             ExpressionAttributeNames: {
                 "#email": "email",
-                "#GSI1SK": "GSI1SK",
+                "#GSI1PK": "GSI1PK",
                 "#updatedAt": "updatedAt",
             },
             ExpressionAttributeValues: {
                 ":email": normalizedNewEmail,
-                ":GSI1SK": normalizedNewEmail,
+                ":GSI1PK": `EMAIL#${normalizedNewEmail}`,
                 ":updatedAt": new Date().toISOString(),
             },
             ConditionExpression: "attribute_exists(PK) AND attribute_not_exists(email)",
