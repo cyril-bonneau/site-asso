@@ -77,8 +77,10 @@ export const handler = async (event) => {
 async function updateUser(data, userId) {
 
     const normalizedNewEmail = String(data.newImage?.newEmail).trim().toLowerCase();
-    const familyName = data.newImage?.familyName || undefined
     const lastName = data.newImage?.lastName || undefined
+    const oldLastName = data.oldImage?.lastName || undefined
+    const firstName = data.newImage?.firstName || undefined
+    const oldFirstName = data.oldImage?.firstName || undefined
 
     const transaction = []
 
@@ -86,18 +88,18 @@ async function updateUser(data, userId) {
         Update: {
             TableName: USER_TABLE,
             Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
-            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #familyName = familyName, #lastName = lastName, #updatedAt = :updatedAt`,
+            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #firstName = firstName, #lastName = lastName, #updatedAt = :updatedAt`,
             ExpressionAttributeNames: {
                 "#email": "email",
                 "#GSI1SK": "GSI1SK",
-                "#familyName": "familyName",
+                "#firstName": "firstName",
                 "#lastName": "lastName",
                 "#updatedAt": "updatedAt",
             },
             ExpressionAttributeValues: {
                 ":email": normalizedNewEmail,
                 ":GSI1SK": normalizedNewEmail,
-                ":familyName": familyName,
+                ":firstName": firstName,
                 ":lastName": lastName,
                 ":updatedAt": new Date().toISOString(),
             },
