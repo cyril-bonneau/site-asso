@@ -60,14 +60,14 @@ async function updateUser(data, id) {
 
     transaction.push({
         Delete: {
-            TableName: TABLE,
+            TableName: AUTH_TABLE,
             Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
         }
     });
 
     transaction.push({
         Put: {
-            TableName: TABLE,
+            TableName: AUTH_TABLE,
             Item: {
                 PK: `EMAIL#${normalizedNewEmail}`,
                 SK: "UNIQUE",
