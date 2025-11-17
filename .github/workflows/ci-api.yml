@@ -74,6 +74,18 @@ jobs:
           role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
           role-session-name: site-asso-ci
 
+      - name: Debug - serverless.api.yml vu par le pipeline
+        working-directory: .
+        run: |
+          echo "=== CONTENU DE serverless.api.yml ==="
+          cat serverless.api.yml
+          echo "===================================="
+
+      - name: Debug - config Serverless compilée
+        working-directory: .
+        run: |
+          npx serverless print --config serverless.api.yml --stage dev | sed -n '1,200p'
+
       - name: Deploy API (dev)
         working-directory: .
         env:
