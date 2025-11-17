@@ -140,6 +140,7 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:UpdateItem
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}

@@ -2,7 +2,6 @@ import {
     DynamoDBClient
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
-import { buildDynUpdate } from "../helpers/updateUser.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
