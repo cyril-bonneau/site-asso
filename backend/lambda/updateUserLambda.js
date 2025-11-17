@@ -32,6 +32,7 @@ export const handler = async (event) => {
 
 async function updateUser(data, id) {
 
+    console.log("data", data)
     const oldEmail = data?.oldEmail;
     const normalizedNewEmail = String(data?.newEmail).trim().toLowerCase();
 
