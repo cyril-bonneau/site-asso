@@ -12,7 +12,7 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 
 export const handler = async (event) => {
     const { email, password, id } = JSON.parse(event.body)
-
+    console.log("tototata")
     if (!email) {
         return json(400, { ok: false, error: "EMAIL_REQUIRED" });
     }
