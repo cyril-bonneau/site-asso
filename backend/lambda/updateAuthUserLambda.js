@@ -14,10 +14,15 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 export const handler = async (event) => {
     try {
         const data = JSON.parse(event.body);
+        data.newEmail = String(data?.newEmail).trim().toLowerCase();
         const id = event?.queryStringParameters?.id;
         console.log("updateUser handler data:", data);
         if (!event?.queryStringParameters?.id) {
             return json(400, { error: "MISSING_USER_ID" });
+        }
+
+        if (data.oldEmail === data.newEmail) {
+            return ({ message: "rien à changer" })
         }
 
         return updateUser(data, id);
@@ -34,29 +39,8 @@ async function updateUser(data, id) {
 
     console.log("data", data)
     const oldEmail = data?.oldEmail;
-    const normalizedNewEmail = String(data?.newEmail).trim().toLowerCase();
 
     const transaction = []
-
-    transaction.push({
-        Update: {
-            TableName: AUTH_TABLE,
-            Key: { PK: `USER#${id}`, SK: "AUTH" },
-            UpdateExpression: `SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt`,
-            ExpressionAttributeNames: {
-                "#email": "email",
-                "#GSI1PK": "GSI1PK",
-                "#updatedAt": "updatedAt",
-            },
-            ExpressionAttributeValues: {
-                ":email": normalizedNewEmail,
-                ":GSI1PK": `EMAIL#${normalizedNewEmail}`,
-                ":updatedAt": new Date().toISOString(),
-            },
-            ConditionExpression: "attribute_exists(PK) AND attribute_not_exists(email)",
-            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        }
-    });
 
     transaction.push({
         Delete: {
@@ -75,6 +59,26 @@ async function updateUser(data, id) {
                 createdAt: new Date().toISOString(),
             },
             ConditionExpression: "attribute_not_exists(PK)",
+            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+        }
+    });
+
+    transaction.push({
+        Update: {
+            TableName: AUTH_TABLE,
+            Key: { PK: `USER#${id}`, SK: "AUTH" },
+            UpdateExpression: `SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt`,
+            ExpressionAttributeNames: {
+                "#email": "email",
+                "#GSI1PK": "GSI1PK",
+                "#updatedAt": "updatedAt",
+            },
+            ExpressionAttributeValues: {
+                ":email": normalizedNewEmail,
+                ":GSI1PK": `EMAIL#${normalizedNewEmail}`,
+                ":updatedAt": new Date().toISOString(),
+            },
+            ConditionExpression: "",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     });

@@ -131,8 +131,8 @@ functions:
           method: PUT
           path: /registerUser
 
-  updateUser:
-    handler: backend/lambda/updateUserLambda.handler
+  updateAuthUser:
+    handler: backend/lambda/updateAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
     environment:
