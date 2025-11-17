@@ -92,7 +92,7 @@ async function updateUser(data, id) {
             return json(200, { ok: true, message: "Info updated successfully" });
         }
 
-        return;
+        return result;
     } catch (err) {
         const errorName = err?.name || "";
         const msg = err?.message || "";
