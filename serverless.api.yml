@@ -228,6 +228,9 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:PutItem
           - dynamodb:TransactWriteItems
           - dynamodb:ConditionCheckItem
         Resource:
