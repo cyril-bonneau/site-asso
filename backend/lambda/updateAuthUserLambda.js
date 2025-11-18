@@ -120,8 +120,8 @@ async function updateUser(data, id) {
             ExpressionAttributeValues: {
                 ":email": data.newEmail,
                 ":GSI1SK": data.newEmail,
-                ":firstName": firstName,
-                ":lastName": lastName,
+                ":firstName": data.firstName,
+                ":lastName": data.lastName,
                 ":updatedAt": new Date().toISOString(),
             },
             ConditionExpression: "attribute_exists(PK)",
