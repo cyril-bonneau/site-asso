@@ -146,7 +146,7 @@ functions:
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
-          - ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
     events:
       - httpApi: 
           method: PATCH
