@@ -2,24 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // --- Mocks hoistés ---
 
-vi.mock('argon2', () => {
-    const verifyMock = vi.fn()
+// On mocke le helper checkPassword (et plus argon2 directement)
+vi.mock('../helpers/checkPassword', () => {
+    const checkPasswordMock = vi.fn()
     return {
-        default: {
-            verify: (...args) => verifyMock(...args),
-        },
-        __mocks: { verifyMock },
+        checkPassword: (...args) => checkPasswordMock(...args),
+        __mocks: { checkPasswordMock },
     }
 })
 
 vi.mock('@aws-sdk/lib-dynamodb', () => {
     const sendMock = vi.fn()
-
-    class GetCommand {
-        constructor(input) {
-            this.input = input
-        }
-    }
 
     class TransactWriteCommand {
         constructor(input) {
@@ -31,7 +24,6 @@ vi.mock('@aws-sdk/lib-dynamodb', () => {
         DynamoDBDocumentClient: {
             from: vi.fn(() => ({ send: sendMock })),
         },
-        GetCommand,
         TransactWriteCommand,
         __mocks: { sendMock },
     }
@@ -40,25 +32,25 @@ vi.mock('@aws-sdk/lib-dynamodb', () => {
 // --- Imports APRÈS les mocks ---
 
 import { handler as removeAuthUserHandler } from '../lambda/removeAuthUserLambda.js'
-import { __mocks as argonMocks } from 'argon2'
+import { __mocks as checkPasswordMocks } from '../helpers/checkPassword'
 import { __mocks as ddbLibMocks } from '@aws-sdk/lib-dynamodb'
 
-const { verifyMock: argonVerifyMock } = argonMocks
+const { checkPasswordMock } = checkPasswordMocks
 const { sendMock: ddbSendMock } = ddbLibMocks
 
 beforeEach(() => {
     ddbSendMock.mockReset()
-    argonVerifyMock.mockReset()
+    checkPasswordMock.mockReset()
     process.env.AUTH_TABLE = 'AuthTableTest'
 })
 
-describe('removeAuthUserLambda - succès / échec / échec critique', () => {
+describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', () => {
     it('✅ supprime un utilisateur si mot de passe correct', async () => {
-        ddbSendMock
-            .mockResolvedValueOnce({ Item: { passwordHash: 'HASHED' } }) // GetCommand
-            .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } }) // TransactWrite
+        // checkPassword retourne true
+        checkPasswordMock.mockResolvedValueOnce(true)
 
-        argonVerifyMock.mockResolvedValueOnce(true)
+        // TransactWriteCommand réussit
+        ddbSendMock.mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
 
         const event = {
             body: JSON.stringify({
@@ -75,13 +67,20 @@ describe('removeAuthUserLambda - succès / échec / échec critique', () => {
         expect(body.ok).toBe(true)
         expect(body.message).toBe('User removed')
 
-        expect(ddbSendMock).toHaveBeenCalledTimes(2)
-        expect(argonVerifyMock).toHaveBeenCalledTimes(1)
+        // checkPassword appelé une fois avec les bons params
+        expect(checkPasswordMock).toHaveBeenCalledTimes(1)
+        expect(checkPasswordMock).toHaveBeenCalledWith({
+            password: 'ValidPwd123!',
+            id: 'abc123',
+        })
+
+        // Une seule requête DDB : le TransactWrite
+        expect(ddbSendMock).toHaveBeenCalledTimes(1)
     })
 
     it('⚠️ échec logique : mauvais mot de passe → WRONG_PASSWORD', async () => {
-        ddbSendMock.mockResolvedValueOnce({ Item: { passwordHash: 'HASHED' } })
-        argonVerifyMock.mockResolvedValueOnce(false)
+        // checkPassword = false
+        checkPasswordMock.mockResolvedValueOnce(false)
 
         const event = {
             body: JSON.stringify({
@@ -91,15 +90,22 @@ describe('removeAuthUserLambda - succès / échec / échec critique', () => {
             }),
         }
 
+        // Le handler ne catch pas, donc on attend un rejet
         await expect(removeAuthUserHandler(event)).rejects.toMatchObject({
             code: 'WRONG_PASSWORD',
             message: 'Wrong password',
         })
 
-        expect(argonVerifyMock).toHaveBeenCalledTimes(1)
+        expect(checkPasswordMock).toHaveBeenCalledTimes(1)
+        // DDB ne doit jamais être appelé dans ce cas
+        expect(ddbSendMock).not.toHaveBeenCalled()
     })
 
-    it('💥 échec critique : GetCommand DDB plante → throw', async () => {
+    it('💥 échec critique : TransactWrite DDB plante → throw', async () => {
+        // Mot de passe OK
+        checkPasswordMock.mockResolvedValueOnce(true)
+
+        // Mais DDB plante au moment de la transaction
         ddbSendMock.mockRejectedValueOnce(new Error('Dynamo down'))
 
         const event = {
@@ -111,5 +117,8 @@ describe('removeAuthUserLambda - succès / échec / échec critique', () => {
         }
 
         await expect(removeAuthUserHandler(event)).rejects.toThrow('Dynamo down')
+
+        expect(checkPasswordMock).toHaveBeenCalledTimes(1)
+        expect(ddbSendMock).toHaveBeenCalledTimes(1)
     })
 })
