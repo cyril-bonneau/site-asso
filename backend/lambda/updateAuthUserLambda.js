@@ -316,13 +316,13 @@ async function updatePasswordCore({ userId, oldPassword, newPassword, transactIt
         Update: {
             TableName: AUTH_TABLE,
             Key: { PK: `USER#${userId}`, SK: "AUTH" },
-            UpdateExpression: "SET #hashedPassword = :hashedPassword, #updatedAt = :updatedAt",
+            UpdateExpression: "SET #passwordHash = :passwordHash, #updatedAt = :updatedAt",
             ExpressionAttributeNames: {
-                "#hashedPassword": "hashedPassword",
+                "#passwordHash": "passwordHash",
                 "#updatedAt": "updatedAt"
             },
             ExpressionAttributeValues: {
-                ":hashedPassword": hashedPassword,
+                ":passwordHash": hashedPassword,
                 ":updatedAt": new Date().toISOString()
             },
             ConditionExpression: "attribute_exists(PK)",
