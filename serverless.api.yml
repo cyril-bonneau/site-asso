@@ -6,7 +6,7 @@ app: site-asso
 
 provider:
   name: aws
-  runtime: nodejs20.x
+  runtime: nodejs22.x
   region: eu-west-3
   stage: ${opt:stage, 'dev'}
   memorySize: 256
@@ -49,7 +49,7 @@ custom:
   esbuild:
     bundle: true
     platform: node
-    target: node20
+    target: node22
     format: esm            # <-- clé : passe en ESM
     sourcemap: true
     minify: false
@@ -137,16 +137,24 @@ functions:
     architecture: arm64
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+      RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:UpdateItem
           - dynamodb:DeleteItem
           - dynamodb:PutItem
+          - dynamodb:GetItem
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
     events:
       - httpApi: 
           method: PATCH

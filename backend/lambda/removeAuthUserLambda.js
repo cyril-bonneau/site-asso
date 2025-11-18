@@ -4,6 +4,8 @@ import {
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import argon2 from 'argon2';
 
+import { checkPassword } from "../helpers/checkPassword";
+
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -29,15 +31,7 @@ async function removeAuthUser(id, email, password) {
     const pkEmail = `EMAIL#${email}`
     const skEmail = "UNIQUE"
 
-    const { Item } = await ddb.send(
-        new GetCommand({
-            TableName: AUTH_TABLE,
-            Key: { PK: pkAuth, SK: skAuth },
-            ProjectionExpression: "passwordHash"
-        })
-    )
-
-    const test = await verifyPassword(Item.passwordHash, password)
+    const test = await checkPassword({ password, id })
 
     if (!test) {
         const err = new Error("Wrong password");
@@ -70,10 +64,6 @@ async function removeAuthUser(id, email, password) {
     } catch (err) {
         throw err
     }
-}
-
-async function verifyPassword(hash, pwd) {
-    return argon2.verify(hash, pwd);
 }
 
 function json(statusCode, body) {
