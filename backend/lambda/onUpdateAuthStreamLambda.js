@@ -76,7 +76,7 @@ export const handler = async (event) => {
 
 async function updateUser(data, userId) {
 
-    const normalizedNewEmail = String(data.newImage?.newEmail).trim().toLowerCase();
+    const normalizedNewEmail = String(data.newImage?.email).trim().toLowerCase();
     const lastName = data.newImage?.lastName || undefined
     const oldLastName = data.oldImage?.lastName || undefined
     const firstName = data.newImage?.firstName || undefined
@@ -88,7 +88,7 @@ async function updateUser(data, userId) {
         Update: {
             TableName: USER_TABLE,
             Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
-            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #firstName = firstName, #lastName = lastName, #updatedAt = :updatedAt`,
+            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #firstName = :firstName, #lastName = :lastName, #updatedAt = :updatedAt`,
             ExpressionAttributeNames: {
                 "#email": "email",
                 "#GSI1SK": "GSI1SK",
@@ -111,7 +111,7 @@ async function updateUser(data, userId) {
     transaction.push({
         Delete: {
             TableName: USER_TABLE,
-            Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
+            Key: { PK: `EMAIL#${data.oldImage.email}`, SK: "UNIQUE" },
         }
     })
 
@@ -134,7 +134,7 @@ async function updateUser(data, userId) {
 
         console.log("Executing transaction:", transaction);
         const resultUpdateUser = await ddb.send(new TransactWriteCommand({
-            TranscationItems: transaction,
+            TransactItems: transaction,
             ReturnConsumedCapacity: "TOTAL",
         }));
 

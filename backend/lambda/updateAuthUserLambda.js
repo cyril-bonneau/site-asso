@@ -4,6 +4,7 @@ import {
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
+const USER_TABLE = process.env.USER_TABLE;
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
@@ -50,6 +51,13 @@ async function updateUser(data, id) {
     });
 
     transaction.push({
+        Delete: {
+            TableName: USER_TABLE,
+            Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
+        }
+    })
+
+    transaction.push({
         Put: {
             TableName: AUTH_TABLE,
             Item: {
@@ -62,6 +70,21 @@ async function updateUser(data, id) {
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     });
+
+    transaction.push({
+        Put: {
+            TableName: USER_TABLE,
+            Item: {
+                PK: `EMAIL#${data.newEmail}`,
+                SK: "UNIQUE",
+                userId: id,
+                GSI1SK: data.newEmail,
+                createdAt: new Date().toISOString(),
+            },
+            ConditionExpression: "attribute_not_exists(PK)",
+            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+        }
+    })
 
     transaction.push({
         Update: {
@@ -81,6 +104,30 @@ async function updateUser(data, id) {
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     });
+
+    transaction.push({
+        Update: {
+            TableName: USER_TABLE,
+            Key: { PK: `USER#${id}`, SK: `PROFILE#${id}` },
+            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #firstName = :firstName, #lastName = :lastName, #updatedAt = :updatedAt`,
+            ExpressionAttributeNames: {
+                "#email": "email",
+                "#GSI1SK": "GSI1SK",
+                "#firstName": "firstName",
+                "#lastName": "lastName",
+                "#updatedAt": "updatedAt",
+            },
+            ExpressionAttributeValues: {
+                ":email": data.newEmail,
+                ":GSI1SK": data.newEmail,
+                ":firstName": firstName,
+                ":lastName": lastName,
+                ":updatedAt": new Date().toISOString(),
+            },
+            ConditionExpression: "attribute_exists(PK)",
+            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+        }
+    })
 
     try {
         console.log("Executing transaction:", transaction);
