@@ -37,7 +37,7 @@ export const handler = async (event) => {
         const newPassword = data.newPassword
 
         const hasEmailChange =
-            oldEmail && newEmail && oldEmail !== newEmail;
+            oldEmail !== undefined && newEmail !== undefined && oldEmail !== newEmail;
         const hasProfileChange =
             firstName !== undefined || lastName !== undefined;
         const hasPasswordChange =
