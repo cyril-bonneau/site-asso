@@ -26,6 +26,12 @@ export const handler = async (event) => {
             return ({ message: "rien à changer" })
         }
 
+        if (!data.lastName) {
+            data.lastName = undefined
+        } else if (!data.firstName) {
+            data.firstName = undefined
+        }
+
         return updateUser(data, id);
     } catch (err) {
         console.error("Error in updateUser handler:", err);
