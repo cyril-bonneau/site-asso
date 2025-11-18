@@ -5,8 +5,8 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
-import { checkPassword } from "../helpers/checkPassword";
-import { hashPassword } from "../auth/auth";
+import { checkPassword } from "../helpers/checkPassword.js";
+import { hashPassword } from "../auth/auth.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const USER_TABLE = process.env.USER_TABLE;

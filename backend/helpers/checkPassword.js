@@ -3,7 +3,7 @@ import {
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
-import { verifyPassword } from "../auth/auth";
+import { verifyPassword } from "../auth/auth.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
