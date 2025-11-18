@@ -32,13 +32,13 @@ export const handler = async (event) => {
 
             if (!newImgRaw) continue;
 
-            const userId = oldImg?.userId
 
             const oldImg = unmarshall(oldImgRaw)
             const newImg = unmarshall(newImgRaw)
             const oldEmail = oldImg?.email
             const newEmail = newImg?.email
 
+            const userId = oldImg?.userId
 
             const data = {
                 "oldImage": oldImg,
