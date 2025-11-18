@@ -1,181 +1,257 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
-    DynamoDBClient
-} from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+    DynamoDBDocumentClient,
+    TransactWriteCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const USER_TABLE = process.env.USER_TABLE;
+
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
 
-// event must contain userId in pathParameters and fields to update in body 
-// (if email is to be updated, use oldEmail and newEmail field)
-
 export const handler = async (event) => {
     try {
-        const data = JSON.parse(event.body);
-        data.newEmail = String(data?.newEmail).trim().toLowerCase();
         const id = event?.queryStringParameters?.id;
-        console.log("updateUser handler data:", data);
-        if (!event?.queryStringParameters?.id) {
-            return json(400, { error: "MISSING_USER_ID" });
+        if (!id) {
+            return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
-        if (data.oldEmail === data.newEmail) {
-            return ({ message: "rien à changer" })
+        let data;
+        try {
+            data = JSON.parse(event.body || "{}");
+        } catch {
+            return json(400, { ok: false, message: "INVALID_JSON_BODY" });
         }
 
-        if (!data.lastName) {
-            data.lastName = undefined
-        } else if (!data.firstName) {
-            data.firstName = undefined
+        const oldEmail = data.oldEmail || undefined
+        const newEmail = data.newEmail ? normalizeEmail(data.newEmail) : undefined;
+        const firstName = data.firstName;
+        const lastName = data.lastName;
+
+        const hasEmailChange =
+            oldEmail && newEmail && oldEmail !== newEmail;
+        const hasProfileChange =
+            newEmail || firstName !== undefined || lastName !== undefined;
+
+        // Rien à faire
+        if (!hasEmailChange && !hasProfileChange) {
+            return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
         }
 
-        return updateUser(data, id);
+        const result = await updateUserTransactional({
+            userId: id,
+            oldEmail,
+            newEmail,
+            firstName,
+            lastName,
+            hasEmailChange,
+            hasProfileChange,
+        });
+
+        return result;
     } catch (err) {
         console.error("Error in updateUser handler:", err);
-        return {
-            statusCode: err.statusCode || 500,
-            body: JSON.stringify({ error: "INTERNAL_ERROR" }),
-        };
-    } // if newEmail is present then update email with uniqueness check else update other fields
+        return json(500, { ok: false, message: "INTERNAL_ERROR" });
+    }
+};
+
+function normalizeEmail(email) {
+    return String(email).trim().toLowerCase();
 }
 
-async function updateUser(data, id) {
+async function updateUserTransactional(params) {
+    const {
+        userId,
+        oldEmail,
+        newEmail,
+        firstName,
+        lastName,
+        hasEmailChange,
+        hasProfileChange,
+    } = params;
 
-    console.log("data", data)
-    const oldEmail = data?.oldEmail;
+    const transactItems = [];
 
-    const transaction = []
+    if (hasEmailChange) {
+        addEmailChangeOperations({
+            transactItems,
+            userId,
+            oldEmail,
+            newEmail,
+        });
+    }
 
-    transaction.push({
-        Delete: {
-            TableName: AUTH_TABLE,
-            Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
+    if (hasProfileChange) {
+        addUserProfileUpdateOperation({
+            transactItems,
+            userId,
+            newEmail,
+            firstName,
+            lastName,
+        });
+    }
+
+    if (transactItems.length === 0) {
+        return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
+    }
+
+    try {
+        console.log("Executing TransactWrite for user:", userId, {
+            hasEmailChange,
+            hasProfileChange,
+            opsCount: transactItems.length,
+        });
+
+        await ddb.send(
+            new TransactWriteCommand({
+                TransactItems: transactItems,
+                ReturnConsumedCapacity: "TOTAL",
+            })
+        );
+
+        return json(200, { ok: true });
+    } catch (err) {
+        const errorName = err?.name || "";
+        const msg = err?.message || "";
+
+        if (
+            errorName === "TransactionCanceledException" ||
+            msg.includes("ConditionalCheckFailed")
+        ) {
+            return json(409, {
+                ok: false,
+                message: "EMAIL_ALREADY_IN_USE",
+                meta: { email: newEmail },
+            });
         }
-    });
 
-    transaction.push({
-        Delete: {
-            TableName: USER_TABLE,
-            Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
-        }
-    })
+        console.error("Error in updateUserEmail transaction:", err);
+        return json(500, { ok: false, message: "INTERNAL_ERROR" });
+    }
+}
 
-    transaction.push({
-        Put: {
-            TableName: AUTH_TABLE,
-            Item: {
-                PK: `EMAIL#${data.newEmail}`,
-                SK: "UNIQUE",
-                userId: `USER#${id}`,
-                createdAt: new Date().toISOString(),
+function addEmailChangeOperations({ transactItems, userId, oldEmail, newEmail }) {
+
+    transactItems.push(
+        {
+            Delete: {
+                TableName: AUTH_TABLE,
+                Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
             },
-            ConditionExpression: "attribute_not_exists(PK)",
-            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        }
-    });
-
-    transaction.push({
-        Put: {
-            TableName: USER_TABLE,
-            Item: {
-                PK: `EMAIL#${data.newEmail}`,
-                SK: "UNIQUE",
-                userId: id,
-                GSI1SK: data.newEmail,
-                createdAt: new Date().toISOString(),
+        },
+        {
+            Delete: {
+                TableName: USER_TABLE,
+                Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
             },
-            ConditionExpression: "attribute_not_exists(PK)",
-            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
-    })
+    );
 
-    transaction.push({
+    transactItems.push(
+        {
+            Put: {
+                TableName: AUTH_TABLE,
+                Item: {
+                    PK: `EMAIL#${newEmail}`,
+                    SK: "UNIQUE",
+                    userId: `USER#${userId}`,
+                    createdAt: new Date().toISOString(),
+                },
+                ConditionExpression: "attribute_not_exists(PK)",
+                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+            },
+        },
+        {
+            Put: {
+                TableName: USER_TABLE,
+                Item: {
+                    PK: `EMAIL#${newEmail}`,
+                    SK: "UNIQUE",
+                    userId,
+                    GSI1SK: newEmail,
+                    createdAt: new Date().toISOString(),
+                },
+                ConditionExpression: "attribute_not_exists(PK)",
+                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+            },
+        }
+    );
+
+    transactItems.push({
         Update: {
             TableName: AUTH_TABLE,
-            Key: { PK: `USER#${id}`, SK: "AUTH" },
-            UpdateExpression: `SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt`,
+            Key: { PK: `USER#${userId}`, SK: "AUTH" },
+            UpdateExpression:
+                "SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt",
             ExpressionAttributeNames: {
                 "#email": "email",
                 "#GSI1PK": "GSI1PK",
                 "#updatedAt": "updatedAt",
             },
             ExpressionAttributeValues: {
-                ":email": data.newEmail,
-                ":GSI1PK": `EMAIL#${data.newEmail}`,
+                ":email": newEmail,
+                ":GSI1PK": `EMAIL#${newEmail}`,
                 ":updatedAt": new Date().toISOString(),
             },
             ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        }
+        },
     });
+}
 
-    transaction.push({
+function addUserProfileUpdateOperation({
+    transactItems,
+    userId,
+    newEmail,
+    firstName,
+    lastName,
+}) {
+    const exprNames = {
+        "#updatedAt": "updatedAt",
+    };
+
+    const exprValues = {
+        ":updatedAt": new Date().toISOString(),
+    };
+
+    let updateExpr = "SET #updatedAt = :updatedAt";
+
+    if (newEmail) {
+        exprNames["#email"] = "email";
+        exprNames["#GSI1SK"] = "GSI1SK";
+        exprValues[":email"] = newEmail;
+        exprValues[":GSI1SK"] = newEmail;
+        updateExpr += ", #email = :email, #GSI1SK = :GSI1SK";
+    }
+
+    if (firstName !== undefined) {
+        exprNames["#firstName"] = "firstName";
+        exprValues[":firstName"] = firstName;
+        updateExpr += ", #firstName = :firstName";
+    }
+
+    if (lastName !== undefined) {
+        exprNames["#lastName"] = "lastName";
+        exprValues[":lastName"] = lastName;
+        updateExpr += ", #lastName = :lastName";
+    }
+
+    transactItems.push({
         Update: {
             TableName: USER_TABLE,
-            Key: { PK: `USER#${id}`, SK: `PROFILE#${id}` },
-            UpdateExpression: `SET #email = :email, #GSI1SK = :GSI1SK, #firstName = :firstName, #lastName = :lastName, #updatedAt = :updatedAt`,
-            ExpressionAttributeNames: {
-                "#email": "email",
-                "#GSI1SK": "GSI1SK",
-                "#firstName": "firstName",
-                "#lastName": "lastName",
-                "#updatedAt": "updatedAt",
-            },
-            ExpressionAttributeValues: {
-                ":email": data.newEmail,
-                ":GSI1SK": data.newEmail,
-                ":firstName": data.firstName,
-                ":lastName": data.lastName,
-                ":updatedAt": new Date().toISOString(),
-            },
+            Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
+            UpdateExpression: updateExpr,
+            ExpressionAttributeNames: exprNames,
+            ExpressionAttributeValues: exprValues,
             ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        }
-    })
-
-    // if (data.password) {
-    //     const hashedPwd = hashPassword(data.password)
-
-    //     transaction.push({
-    //         Update
-    //     })
-    // }
-
-    try {
-        console.log("Executing transaction:", transaction);
-        const result = await ddb.send(new TransactWriteCommand({
-            TransactItems: transaction,
-            ReturnConsumedCapacity: "TOTAL",
-        }));
-
-        return result;
-
-    } catch (err) {
-        const errorName = err?.name || "";
-        const msg = err?.message || "";
-
-        if (errorName === "TransactionCanceledException" || msg.includes("ConditionalCheckFailed")) {
-            return json(409, { ok: false, message: "EMAIL_ALREADY_IN_USE", meta: { email: data.newEmail } });
-        }
-
-        console.error("Error in updateUserEmail function:", err);
-        return json(500, { ok: false, message: "INTERNAL_ERROR" });
-    }
-}
-
-async function hashPassword(pwd) {
-    return argon2.hash(pwd, {
-        type: argon2.argon2id,
-        memoryCost: 2 ** 16,
-        timeCost: 3,
-        parallelism: 1,
+        },
     });
 }
 
-async function json(statusCode, body) {
+function json(statusCode, body) {
     return {
         statusCode,
         headers: { "content-type": "application/json" },
