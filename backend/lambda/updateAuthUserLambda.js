@@ -81,6 +81,7 @@ async function updateUser(data, id) {
                 GSI1SK: data.newEmail,
                 createdAt: new Date().toISOString(),
             },
+            ConditionExpression: "attribute_not_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     })
@@ -100,6 +101,7 @@ async function updateUser(data, id) {
                 ":GSI1PK": `EMAIL#${data.newEmail}`,
                 ":updatedAt": new Date().toISOString(),
             },
+            ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     });
@@ -123,9 +125,18 @@ async function updateUser(data, id) {
                 ":lastName": data.lastName,
                 ":updatedAt": new Date().toISOString(),
             },
+            ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     })
+
+    // if (data.password) {
+    //     const hashedPwd = hashPassword(data.password)
+
+    //     transaction.push({
+    //         Update
+    //     })
+    // }
 
     try {
         console.log("Executing transaction:", transaction);
@@ -147,6 +158,15 @@ async function updateUser(data, id) {
         console.error("Error in updateUserEmail function:", err);
         return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
+}
+
+async function hashPassword(pwd) {
+    return argon2.hash(pwd, {
+        type: argon2.argon2id,
+        memoryCost: 2 ** 16,
+        timeCost: 3,
+        parallelism: 1,
+    });
 }
 
 async function json(statusCode, body) {
