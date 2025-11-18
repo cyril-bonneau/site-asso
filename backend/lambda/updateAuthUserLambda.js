@@ -53,7 +53,7 @@ async function updateUser(data, id) {
         Put: {
             TableName: AUTH_TABLE,
             Item: {
-                PK: `EMAIL#${normalizedNewEmail}`,
+                PK: `EMAIL#${data.newEmail}`,
                 SK: "UNIQUE",
                 userId: `USER#${id}`,
                 createdAt: new Date().toISOString(),
@@ -74,8 +74,8 @@ async function updateUser(data, id) {
                 "#updatedAt": "updatedAt",
             },
             ExpressionAttributeValues: {
-                ":email": normalizedNewEmail,
-                ":GSI1PK": `EMAIL#${normalizedNewEmail}`,
+                ":email": data.newEmail,
+                ":GSI1PK": `EMAIL#${data.newEmail}`,
                 ":updatedAt": new Date().toISOString(),
             },
             ConditionExpression: "",
