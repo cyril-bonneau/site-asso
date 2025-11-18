@@ -78,7 +78,6 @@ async function updateUser(data, id) {
                 ":GSI1PK": `EMAIL#${data.newEmail}`,
                 ":updatedAt": new Date().toISOString(),
             },
-            ConditionExpression: "",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     });
