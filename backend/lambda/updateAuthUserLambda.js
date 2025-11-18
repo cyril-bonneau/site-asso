@@ -81,7 +81,6 @@ async function updateUser(data, id) {
                 GSI1SK: data.newEmail,
                 createdAt: new Date().toISOString(),
             },
-            ConditionExpression: "attribute_not_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     })
@@ -124,7 +123,6 @@ async function updateUser(data, id) {
                 ":lastName": data.lastName,
                 ":updatedAt": new Date().toISOString(),
             },
-            ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
     })
@@ -143,7 +141,7 @@ async function updateUser(data, id) {
         const msg = err?.message || "";
 
         if (errorName === "TransactionCanceledException" || msg.includes("ConditionalCheckFailed")) {
-            return json(409, { ok: false, message: "EMAIL_ALREADY_IN_USE", meta: { email: normalizedNewEmail } });
+            return json(409, { ok: false, message: "EMAIL_ALREADY_IN_USE", meta: { email: data.newEmail } });
         }
 
         console.error("Error in updateUserEmail function:", err);
