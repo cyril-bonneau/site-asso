@@ -2,7 +2,6 @@ import {
     DynamoDBClient
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
-import argon2 from 'argon2';
 
 import { checkPassword } from "../helpers/checkPassword";
 

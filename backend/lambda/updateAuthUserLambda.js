@@ -133,6 +133,7 @@ async function updateUserTransactional(params) {
         console.log("Executing TransactWrite for user:", userId, {
             hasEmailChange,
             hasProfileChange,
+            hasPasswordChange,
             opsCount: transactItems.length,
         });
 
@@ -333,6 +334,7 @@ async function updatePasswordCore({ userId, oldPassword, newPassword, transactIt
 
 const updatePassword = withRateLimit(updatePasswordCore, {
     scope: "updatePassword",
+    capacity: 3,
     keySelector: ({ userId }) => `USER#${userId}`
 })
 
