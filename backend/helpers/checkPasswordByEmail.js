@@ -16,7 +16,7 @@ export async function checkPasswordByEmail({ password, email }) {
     const auth = await getAuthByEmail(email)
 
     if (!auth || !auth.passwordHash) {
-        throw
+        throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
     }
 
     return verifyPassword(auth.passwordHash, password)
