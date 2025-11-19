@@ -1,7 +1,7 @@
 import {
     DynamoDBClient
 } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 
 import { checkPasswordByUserId } from "../helpers/checkPasswordByUserId";
 import { json } from "../helpers/json";
