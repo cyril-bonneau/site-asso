@@ -1,11 +1,13 @@
-// backend/rateLimit/withRateLimit.test.js
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const checkRateLimitBucketMock = vi.fn();
+let checkRateLimitBucketMock;
 
-vi.mock("./checkRateLimitBucket.js", () => ({
-    checkRateLimitBucket: checkRateLimitBucketMock,
-}));
+vi.mock("./checkRateLimitBucket.js", () => {
+    checkRateLimitBucketMock = vi.fn();
+    return {
+        checkRateLimitBucket: checkRateLimitBucketMock,
+    };
+});
 
 import { withRateLimit } from "./withRateLimit.js";
 

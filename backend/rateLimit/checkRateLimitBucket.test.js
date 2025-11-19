@@ -9,6 +9,7 @@ vi.mock("@aws-sdk/client-dynamodb", () => ({
 }));
 
 vi.mock("@aws-sdk/lib-dynamodb", () => {
+    sendMock = vi.fn();
     return {
         DynamoDBDocumentClient: {
             from: () => ({ send: sendMock }),
