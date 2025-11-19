@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-let checkRateLimitBucketMock;
-
 vi.mock("./checkRateLimitBucket.js", () => {
-    checkRateLimitBucketMock = vi.fn();
+    const checkRateLimitBucketMock = vi.fn();
     return {
         checkRateLimitBucket: checkRateLimitBucketMock,
+        __checkRateLimitBucketMock: checkRateLimitBucketMock,
     };
 });
 
+// ⚠️ Import APRES le mock
 import { withRateLimit } from "./withRateLimit.js";
+import { __checkRateLimitBucketMock as checkRateLimitBucketMock } from "./checkRateLimitBucket.js";
 
 describe("withRateLimit", () => {
     beforeEach(() => {
