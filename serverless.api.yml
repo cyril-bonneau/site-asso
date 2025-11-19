@@ -131,6 +131,30 @@ functions:
           method: PUT
           path: /registerUser
 
+  loginUser:
+    handler: backend/lambda/logInAuthUserLambda.js
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+          - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}/index/*
+      
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+    events:
+      - httpApi:
+          method: GET
+          path: /login
+
   updateAuthUser:
     handler: backend/lambda/updateAuthUserLambda.handler
     memorySize: 1024

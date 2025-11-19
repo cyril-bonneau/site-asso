@@ -1,7 +1,6 @@
 // checkRateLimitBucket.js (Option B: PK/TTL)
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand, putCommand } from "@aws-sdk/lib-dynamodb";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -24,7 +23,8 @@ export async function checkRateLimitBucket({
     refillRate,
     cost = 1,
     table = process.env.RATE_LIMIT_TABLE,
-    ttlSeconds = 86400
+    ttlSeconds = 86400,
+    windowSeconds
 }) {
     const pkValue = `RL#${scope}#${key}`;
     const nowMs = Date.now();
@@ -35,6 +35,7 @@ export async function checkRateLimitBucket({
 
     // 1) GET
     let item;
+
     try {
         const res = await ddb.send(new GetCommand({
             TableName: table,
@@ -44,6 +45,225 @@ export async function checkRateLimitBucket({
         item = res.Item;
     } catch (e) {
         warn("Get failed", e);
+    }
+
+    if (windowSeconds) {
+
+        const capacityInt = Number.isFinite(capacity) ? capacity : 3;
+        const costInt = Number.isFinite(cost) ? cost : 1;
+
+        if (!item) {
+            const remaining = Math.max(0, capacityInt - costInt);
+            const resetSec = nowSec + windowSeconds; // fin de la fenêtre
+
+            try {
+                await ddb.send(new UpdateCommand({
+                    TableName: table,
+                    Key: { PK: pkValue },
+                    UpdateExpression: "SET #tokens = :tokens, #win = :win, #ver = :ver, #ttl = :ttl",
+                    ExpressionAttributeNames: {
+                        "#tokens": "tokens",
+                        "#win": "windowStartedAt",
+                        "#ver": "ver",
+                        "#ttl": "TTL",
+                    },
+                    ExpressionAttributeValues: {
+                        ":tokens": remaining,
+                        ":win": nowSec,
+                        ":ver": 1,
+                        ":ttl": nowSec + ttlSeconds,
+                    },
+                    ConditionExpression: "attribute_not_exists(#ver)", // création only
+                }));
+            } catch (err) {
+                warn("Create race (window mode), retrying", err?.name);
+                return await checkRateLimitBucket({
+                    scope,
+                    key,
+                    capacity,
+                    refillRate,
+                    cost,
+                    table,
+                    ttlSeconds,
+                    windowSeconds,
+                });
+            }
+
+            const headers = {
+                "X-RateLimit-Limit": String(capacityInt),
+                "X-RateLimit-Remaining": String(remaining),
+                "X-RateLimit-Reset": String(resetSec),
+            };
+
+            if (remaining <= 0) {
+                headers["Retry-After"] = String(windowSeconds);
+                return {
+                    allowed: false,
+                    remaining: 0,
+                    reset: resetSec,
+                    headers,
+                    status: 429,
+                };
+            }
+
+            return { allowed: true, remaining, reset: resetSec, headers };
+        }
+
+        const prevTokens = typeof item.tokens === "number" ? item.tokens : capacityInt;
+        const windowStartedAt = typeof item.windowStartedAt === "number" ? item.windowStartedAt : nowSec;
+        const elapsed = nowSec - windowStartedAt;
+        const resetSec = windowStartedAt + windowSeconds;
+        const prevVer = item.ver ?? 0;
+        const newVer = prevVer + 1;
+
+        if (elapsed >= windowSeconds) {
+            const remaining = Math.max(0, capacityInt - costInt);
+
+            try {
+                await ddb.send(new UpdateCommand({
+                    TableName: table,
+                    Key: { PK: pkValue },
+                    UpdateExpression:
+                        "SET #tokens = :tokens, #win = :win, #ver = :ver, #ttl = :ttl",
+                    ExpressionAttributeNames: {
+                        "#tokens": "tokens",
+                        "#win": "windowStartedAt",
+                        "#ver": "ver",
+                        "#ttl": "TTL",
+                    },
+                    ExpressionAttributeValues: {
+                        ":tokens": remaining,
+                        ":win": nowSec,
+                        ":ver": newVer,
+                        ":ttl": nowSec + ttlSeconds,
+                    },
+                    ConditionExpression: "attribute_not_exists(#ver) OR #ver = :prevVer",
+                }));
+            } catch (err) {
+                if (err.name === "ConditionalCheckFailedException") {
+                    // quelqu'un a modifié entre temps → on retente une fois
+                    log("CAS conflict (window reset), retry once");
+                    return await checkRateLimitBucket({
+                        scope,
+                        key,
+                        capacity,
+                        refillRate,
+                        cost,
+                        table,
+                        ttlSeconds,
+                        windowSeconds,
+                    });
+                }
+                warn("Update failed (window reset)", err);
+                return {
+                    allowed: true,
+                    remaining: prevTokens,
+                    reset: nowSec,
+                    headers: {},
+                };
+            }
+
+            const headers = {
+                "X-RateLimit-Limit": String(capacityInt),
+                "X-RateLimit-Remaining": String(remaining),
+                "X-RateLimit-Reset": String(nowSec + windowSeconds),
+            };
+
+            if (remaining <= 0) {
+                headers["Retry-After"] = String(windowSeconds);
+                return {
+                    allowed: false,
+                    remaining: 0,
+                    reset: nowSec + windowSeconds,
+                    headers,
+                    status: 429,
+                };
+            }
+
+            return {
+                allowed: true,
+                remaining,
+                reset: nowSec + windowSeconds,
+                headers,
+            };
+        }
+
+        if (prevTokens < costInt) {
+            const retryAfter = Math.max(1, resetSec - nowSec);
+
+            const headers = {
+                "X-RateLimit-Limit": String(capacityInt),
+                "X-RateLimit-Remaining": String(prevTokens),
+                "X-RateLimit-Reset": String(resetSec),
+                "Retry-After": String(retryAfter),
+            };
+
+            return {
+                allowed: false,
+                remaining: prevTokens,
+                reset: resetSec,
+                headers,
+                status: 429,
+            };
+        }
+
+        const newTokens = prevTokens - costInt;
+
+        try {
+            await ddb.send(new UpdateCommand({
+                TableName: table,
+                Key: { PK: pkValue },
+                UpdateExpression:
+                    "SET #tokens = :tokens, #win = :win, #ver = :ver, #ttl = :ttl",
+                ExpressionAttributeNames: {
+                    "#tokens": "tokens",
+                    "#win": "windowStartedAt",
+                    "#ver": "ver",
+                    "#ttl": "TTL",
+                },
+                ExpressionAttributeValues: {
+                    ":tokens": newTokens,
+                    ":win": windowStartedAt,
+                    ":ver": newVer,
+                    ":ttl": nowSec + ttlSeconds,
+                },
+                ConditionExpression: "attribute_not_exists(#ver) OR #ver = :prevVer",
+            }));
+        } catch (err) {
+            if (err.name === "ConditionalCheckFailedException") {
+                log("CAS conflict (window consume), retry once");
+                return await checkRateLimitBucket({
+                    scope,
+                    key,
+                    capacity,
+                    refillRate,
+                    cost,
+                    table,
+                    ttlSeconds,
+                    windowSeconds,
+                });
+            }
+            warn("Update failed (window consume)", err);
+            return {
+                allowed: true,
+                remaining: prevTokens,
+                reset: resetSec,
+                headers: {},
+            };
+        }
+
+        const headers = {
+            "X-RateLimit-Limit": String(capacityInt),
+            "X-RateLimit-Remaining": String(newTokens),
+            "X-RateLimit-Reset": String(resetSec),
+        };
+
+        return {
+            allowed: true,
+            remaining: newTokens,
+            reset: resetSec,
+            headers,
+        };
     }
 
     if (!item) {

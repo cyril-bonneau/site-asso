@@ -11,13 +11,14 @@ export function withRateLimit(handler, opts) {
             return event?.requestContext?.http?.sourceIp
                 || event?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim()
                 || "unknown";
-        }
+        },
+        windowSeconds
     } = opts || {};
 
     return async (event, context) => {
         const key = keyFromEvent(event);
         const rl = await checkRateLimitBucket({
-            scope, key, capacity, refillRate, cost
+            scope, key, capacity, refillRate, cost, windowSeconds
         });
 
         if (!rl.allowed) {

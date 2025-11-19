@@ -12,17 +12,25 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
 
-export async function checkPassword({ password, userId }) {
+export async function checkPasswordByUserId({ password, userId }) {
+    const auth = await getAuthByUserId(userId)
+
+    if (!auth || !auth.passwordHash) {
+        throw
+    }
+
+    return verifyPassword(auth.passwordHash, password)
+}
+
+async function getAuthByUserId(userId) {
     try {
-        const { Item } = await ddb.send(
+        return { Item } = await ddb.send(
             new GetCommand({
                 TableName: AUTH_TABLE,
                 Key: { PK: `USER#${userId}`, SK: "AUTH" },
                 ProjectionExpression: "passwordHash"
             })
         )
-
-        return verifyPassword(Item.passwordHash, password)
 
     } catch (err) {
         return err

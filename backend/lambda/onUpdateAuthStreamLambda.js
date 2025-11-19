@@ -150,7 +150,7 @@ async function updateUser(data, userId) {
     }
 }
 
-async function json(statusCode, body) {
+function json(statusCode, body) {
     return {
         statusCode,
         headers: { "content-type": "application/json" },

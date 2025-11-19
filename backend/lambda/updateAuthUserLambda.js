@@ -5,8 +5,10 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
-import { checkPassword } from "../helpers/checkPassword.js";
+import { checkPasswordByUserId } from "../helpers/checkPasswordByUserId.js";
 import { hashPassword } from "../auth/auth.js";
+import { json } from "../helpers/json.js";
+import { normalizeEmail } from "../helpers/toolbox.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const USER_TABLE = process.env.USER_TABLE;
@@ -70,10 +72,6 @@ export const handler = async (event) => {
         return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
 };
-
-function normalizeEmail(email) {
-    return String(email).trim().toLowerCase();
-}
 
 async function updateUserTransactional(params) {
     const {
@@ -303,7 +301,7 @@ function addUserProfileUpdateOperation({
 
 async function updatePasswordCore({ userId, oldPassword, newPassword, transactItems }) {
 
-    const test = await checkPassword({ password: oldPassword, userId })
+    const test = await checkPasswordByUserId({ password: oldPassword, userId })
 
     if (!test) {
         const err = new Error("Wrong password");
@@ -337,11 +335,3 @@ const updatePassword = withRateLimit(updatePasswordCore, {
     capacity: 3,
     keySelector: ({ userId }) => `USER#${userId}`
 })
-
-function json(statusCode, body) {
-    return {
-        statusCode,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-    };
-}

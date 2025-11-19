@@ -7,6 +7,8 @@ import { nanoid } from "nanoid";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 
 import { hashPassword } from "../auth/auth.js";
+import { json } from "../helpers/json.js";
+import { normalizeEmail } from "../helpers/toolbox.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
@@ -31,7 +33,18 @@ export const handler = withRateLimit(registerUserCore, {
 
 async function registerUserCore(event) {
     try {
-        const { email, password } = JSON.parse(event.body);
+        let data;
+        try {
+            data = JSON.parse(event.body);
+        } catch (err) {
+            return json(400, { ok: false, message: "INVALID_JSON_BODY" })
+        }
+
+        const { email, password } = data
+
+        if (!email || !password) {
+            return json(400, { ok: false, message: "MISSING_CREDENTIALS" })
+        }
 
         const check = await validatePasswordBackend(password, {
             email,
@@ -63,7 +76,7 @@ async function registerUserCore(event) {
 
 async function createAuthEntry(email, password) {
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     const hashedPwd = await hashPassword(password);
     const maxIdRetries = 3;
     for (let attempt = 0; attempt < maxIdRetries; attempt++) {
@@ -151,12 +164,4 @@ async function createAuthEntry(email, password) {
             return { statusCode: 500, error: "INTERNAL_ERROR" };
         }
     }
-}
-
-function json(statusCode, body) {
-    return {
-        statusCode,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-    };
 }

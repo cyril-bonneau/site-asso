@@ -3,7 +3,8 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 
-import { checkPassword } from "../helpers/checkPassword";
+import { checkPasswordByUserId } from "../helpers/checkPasswordByUserId";
+import { json } from "../helpers/json";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
@@ -12,7 +13,17 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 });
 
 export const handler = async (event) => {
-    const { email, password, id } = JSON.parse(event.body)
+    let data
+    try {
+        data = JSON.parse(event.body)
+    } catch (err) {
+        return json(400, { ok: false, message: "INVALID_JSON_BODY" })
+    }
+    const { email, password, id } = data
+
+    if (!email || !password || !id) {
+        return json(400, { ok: false, message: "MISSING_CRUCIAL_DATA" })
+    }
 
     if (!email) {
         return json(400, { ok: false, error: "EMAIL_REQUIRED" });
@@ -22,15 +33,15 @@ export const handler = async (event) => {
     return json(201, { ok: true, message: "User removed", ...result });
 }
 
-async function removeAuthUser(id, email, password) {
+async function removeAuthUser(userId, email, password) {
 
     console.log('test')
-    const pkAuth = `USER#${id}`
+    const pkAuth = `USER#${userId}`
     const skAuth = "AUTH"
     const pkEmail = `EMAIL#${email}`
     const skEmail = "UNIQUE"
 
-    const test = await checkPassword({ password, id })
+    const test = await checkPasswordByUserId({ password, userId })
 
     if (!test) {
         const err = new Error("Wrong password");
@@ -63,12 +74,4 @@ async function removeAuthUser(id, email, password) {
     } catch (err) {
         throw err
     }
-}
-
-function json(statusCode, body) {
-    return {
-        statusCode,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-    };
 }

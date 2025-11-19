@@ -1,72 +1,140 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+// backend/rateLimit/checkRateLimitBucket.test.js
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// --- Mocks hoistés ---
-vi.mock('@aws-sdk/lib-dynamodb', () => {
-    const sendMock = vi.fn()
+const sendMock = vi.fn();
 
-    class GetCommand {
-        constructor(input) {
-            this.input = input
-        }
-    }
+// Mock des clients AWS
+vi.mock("@aws-sdk/client-dynamodb", () => ({
+    DynamoDBClient: vi.fn(),
+}));
 
-    class UpdateCommand {
-        constructor(input) {
-            this.input = input
-        }
-    }
-
+vi.mock("@aws-sdk/lib-dynamodb", () => {
     return {
         DynamoDBDocumentClient: {
-            from: vi.fn(() => ({ send: sendMock })),
+            from: () => ({ send: sendMock }),
         },
-        GetCommand,
-        UpdateCommand,
-        __mocks: { sendMock },
-    }
-})
+        GetCommand: vi.fn(),
+        UpdateCommand: vi.fn(),
+    };
+});
 
-// --- Imports APRÈS les mocks ---
-import { checkRateLimitBucket } from '../rateLimit/checkRateLimitBucket.js'
-import { __mocks as ddbLibMocks } from '@aws-sdk/lib-dynamodb'
+// On importe APRES les mocks
+import { checkRateLimitBucket } from "./checkRateLimitBucket.js";
 
-const { sendMock: ddbSendMock } = ddbLibMocks
+describe("checkRateLimitBucket", () => {
+    const tableName = "RateLimitTable";
 
-beforeEach(() => {
-    ddbSendMock.mockReset()
-    process.env.RATE_LIMIT_TABLE = 'RateLimitTest'
-})
+    beforeEach(() => {
+        sendMock.mockReset();
+        vi.spyOn(Date, "now").mockReturnValue(1_000_000); // 1 000 000 ms → 1000s
+    });
 
-describe('checkRateLimitBucket', () => {
-    it('should allow when bucket has tokens', async () => {
-        // 1er appel: GetCommand → bucket existant avec 1 token
-        ddbSendMock.mockResolvedValueOnce({
-            Item: {
-                PK: 'RL#REGISTER#127.0.0.1',
-                tokens: 1,
-                lastRefillAt: Date.now(),
-            },
-        })
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
-        // 2e appel: UpdateCommand → OK (consomme 1 token)
-        ddbSendMock.mockResolvedValueOnce({})
+    it("devrait créer une fenêtre fixe au premier appel (windowSeconds)", async () => {
+        // 1er send = GetItem → aucun item
+        // 2e send = UpdateItem → création
+        sendMock
+            .mockResolvedValueOnce({ Item: undefined }) // GetItem
+            .mockResolvedValueOnce({}); // UpdateItem OK
 
         const res = await checkRateLimitBucket({
-            key: 'RL#REGISTER#127.0.0.1',
+            scope: "login",
+            key: "EMAIL#foo@example.com",
             capacity: 3,
-            refillRate: 0.1,
+            refillRate: 1, // ignoré en mode fenêtre, mais demandé par la signature
             cost: 1,
-        })
+            table: tableName,
+            ttlSeconds: 86400,
+            windowSeconds: 600, // 10 minutes
+        });
 
-        // ✅ On vérifie la forme de la réponse
-        expect(res.allowed).toBe(true)
-        expect(res.remaining).toBeTypeOf('number')
-        expect(res.reset).toBeTypeOf('number')
+        expect(res.allowed).toBe(true);
+        expect(res.remaining).toBe(2); // 3 - 1
+        expect(res.status).toBeUndefined();
+
+        // nowSec = 1000, donc reset = 1000 + 600
+        expect(res.reset).toBe(1000 + 600);
+
         expect(res.headers).toMatchObject({
-            'X-RateLimit-Limit': '3',
-        })
+            "X-RateLimit-Limit": "3",
+            "X-RateLimit-Remaining": "2",
+            "X-RateLimit-Reset": String(1000 + 600),
+        });
 
-        // Et que Dynamo a bien été appelé
-        expect(ddbSendMock).toHaveBeenCalledTimes(2)
-    })
-})
+        // 2 appels à ddb.send : Get puis Update
+        expect(sendMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("devrait bloquer quand tokens=0 dans la fenêtre (windowSeconds)", async () => {
+        // GetItem retourne un item avec tokens = 0
+        sendMock.mockResolvedValueOnce({
+            Item: {
+                PK: "RL#login#EMAIL#foo@example.com",
+                tokens: 0,
+                windowStartedAt: 1000, // même que nowSec → elapsed = 0 < windowSeconds
+                ver: 1,
+            },
+        });
+
+        const res = await checkRateLimitBucket({
+            scope: "login",
+            key: "EMAIL#foo@example.com",
+            capacity: 3,
+            refillRate: 1,
+            cost: 1,
+            table: tableName,
+            ttlSeconds: 86400,
+            windowSeconds: 600,
+        });
+
+        expect(res.allowed).toBe(false);
+        expect(res.status).toBe(429);
+        expect(res.remaining).toBe(0);
+
+        // reset = windowStartedAt + windowSeconds = 1000 + 600
+        expect(res.reset).toBe(1000 + 600);
+
+        expect(res.headers).toMatchObject({
+            "X-RateLimit-Limit": "3",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(1000 + 600),
+        });
+        expect(res.headers["Retry-After"]).toBeDefined();
+
+        // Pas d'UpdateItem → un seul appel (GetItem)
+        expect(sendMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("devrait créer un bucket classique au premier appel (mode token bucket)", async () => {
+        // GetItem → aucun item
+        // UpdateItem → création bucket classique
+        sendMock
+            .mockResolvedValueOnce({ Item: undefined }) // GetItem
+            .mockResolvedValueOnce({}); // UpdateItem
+
+        const res = await checkRateLimitBucket({
+            scope: "IP",
+            key: "127.0.0.1",
+            capacity: 3,
+            refillRate: 1,
+            cost: 1,
+            table: tableName,
+            ttlSeconds: 86400,
+            // pas de windowSeconds → mode token bucket
+        });
+
+        expect(res.allowed).toBe(true);
+        expect(res.remaining).toBe(2); // 3 - 1
+        expect(res.status).toBeUndefined();
+
+        expect(res.headers).toMatchObject({
+            "X-RateLimit-Limit": "3",
+            "X-RateLimit-Remaining": "2",
+        });
+
+        expect(sendMock).toHaveBeenCalledTimes(2);
+    });
+});

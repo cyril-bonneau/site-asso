@@ -2,12 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // --- Mocks hoistés ---
 
-// On mocke le helper checkPassword (et plus argon2 directement)
-vi.mock('../helpers/checkPassword', () => {
-    const checkPasswordMock = vi.fn()
+// On mocke maintenant checkPasswordByUserId
+vi.mock('../helpers/checkPasswordByUserId.js', () => {
+    const checkPasswordByUserIdMock = vi.fn()
     return {
-        checkPassword: (...args) => checkPasswordMock(...args),
-        __mocks: { checkPasswordMock },
+        checkPasswordByUserId: (...args) => checkPasswordByUserIdMock(...args),
+        __mocks: { checkPasswordByUserIdMock },
     }
 })
 
@@ -32,22 +32,22 @@ vi.mock('@aws-sdk/lib-dynamodb', () => {
 // --- Imports APRÈS les mocks ---
 
 import { handler as removeAuthUserHandler } from '../lambda/removeAuthUserLambda.js'
-import { __mocks as checkPasswordMocks } from '../helpers/checkPassword'
+import { __mocks as checkPasswordByUserIdMocks } from '../helpers/checkPasswordByUserId.js'
 import { __mocks as ddbLibMocks } from '@aws-sdk/lib-dynamodb'
 
-const { checkPasswordMock } = checkPasswordMocks
+const { checkPasswordByUserIdMock } = checkPasswordByUserIdMocks
 const { sendMock: ddbSendMock } = ddbLibMocks
 
 beforeEach(() => {
     ddbSendMock.mockReset()
-    checkPasswordMock.mockReset()
+    checkPasswordByUserIdMock.mockReset()
     process.env.AUTH_TABLE = 'AuthTableTest'
 })
 
 describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', () => {
     it('✅ supprime un utilisateur si mot de passe correct', async () => {
-        // checkPassword retourne true
-        checkPasswordMock.mockResolvedValueOnce(true)
+        // checkPasswordByUserId retourne true
+        checkPasswordByUserIdMock.mockResolvedValueOnce(true)
 
         // TransactWriteCommand réussit
         ddbSendMock.mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
@@ -67,11 +67,11 @@ describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', (
         expect(body.ok).toBe(true)
         expect(body.message).toBe('User removed')
 
-        // checkPassword appelé une fois avec les bons params
-        expect(checkPasswordMock).toHaveBeenCalledTimes(1)
-        expect(checkPasswordMock).toHaveBeenCalledWith({
+        // checkPasswordByUserId appelé une fois avec les bons params
+        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1)
+        expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
             password: 'ValidPwd123!',
-            id: 'abc123',
+            userId: 'abc123',
         })
 
         // Une seule requête DDB : le TransactWrite
@@ -79,8 +79,8 @@ describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', (
     })
 
     it('⚠️ échec logique : mauvais mot de passe → WRONG_PASSWORD', async () => {
-        // checkPassword = false
-        checkPasswordMock.mockResolvedValueOnce(false)
+        // checkPasswordByUserId = false
+        checkPasswordByUserIdMock.mockResolvedValueOnce(false)
 
         const event = {
             body: JSON.stringify({
@@ -96,14 +96,14 @@ describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', (
             message: 'Wrong password',
         })
 
-        expect(checkPasswordMock).toHaveBeenCalledTimes(1)
+        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1)
         // DDB ne doit jamais être appelé dans ce cas
         expect(ddbSendMock).not.toHaveBeenCalled()
     })
 
     it('💥 échec critique : TransactWrite DDB plante → throw', async () => {
         // Mot de passe OK
-        checkPasswordMock.mockResolvedValueOnce(true)
+        checkPasswordByUserIdMock.mockResolvedValueOnce(true)
 
         // Mais DDB plante au moment de la transaction
         ddbSendMock.mockRejectedValueOnce(new Error('Dynamo down'))
@@ -118,7 +118,7 @@ describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', (
 
         await expect(removeAuthUserHandler(event)).rejects.toThrow('Dynamo down')
 
-        expect(checkPasswordMock).toHaveBeenCalledTimes(1)
+        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1)
         expect(ddbSendMock).toHaveBeenCalledTimes(1)
     })
 })
