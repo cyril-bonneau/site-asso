@@ -305,6 +305,7 @@ async function handleWindowMode({
                         ":win": nowSec,
                         ":ver": newVer,
                         ":ttl": nowSec + ttlSeconds,
+                        ":prevVer": prevVer
                     },
                     ConditionExpression:
                         "attribute_not_exists(#ver) OR #ver = :prevVer",
@@ -402,6 +403,7 @@ async function handleWindowMode({
                     ":win": windowStartedAt,
                     ":ver": newVer,
                     ":ttl": nowSec + ttlSeconds,
+                    ":prevVer": prevVer
                 },
                 ConditionExpression:
                     "attribute_not_exists(#ver) OR #ver = :prevVer",
