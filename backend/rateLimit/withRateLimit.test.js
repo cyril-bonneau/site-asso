@@ -1,101 +1,128 @@
+// backend/rateLimit/withRateLimit.test.js
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("./checkRateLimitBucket.js", () => {
-    const checkRateLimitBucketMock = vi.fn();
-    return {
-        checkRateLimitBucket: checkRateLimitBucketMock,
-        __checkRateLimitBucketMock: checkRateLimitBucketMock,
-    };
-});
+// IMPORTANT : mock AVANT les imports du module testé
+vi.mock("./checkRateLimitBucket.js", () => ({
+    checkRateLimitBucket: vi.fn()
+}));
 
-// ⚠️ Import APRES le mock
 import { withRateLimit } from "./withRateLimit.js";
-import { __checkRateLimitBucketMock as checkRateLimitBucketMock } from "./checkRateLimitBucket.js";
+import { checkRateLimitBucket } from "./checkRateLimitBucket.js";
 
 describe("withRateLimit", () => {
     beforeEach(() => {
-        checkRateLimitBucketMock.mockReset();
+        vi.clearAllMocks();
     });
 
-    it("devrait appeler le handler quand le rate-limit autorise", async () => {
-        checkRateLimitBucketMock.mockResolvedValueOnce({
+    it("appelle le handler et merge les headers quand allowed", async () => {
+        checkRateLimitBucket.mockResolvedValue({
             allowed: true,
-            remaining: 2,
-            reset: 1000,
+            remaining: 9,
+            reset: 1234,
             headers: {
-                "X-RateLimit-Limit": "3",
-                "X-RateLimit-Remaining": "2",
-            },
+                "X-RateLimit-Limit": "10",
+                "X-RateLimit-Remaining": "9",
+                "X-RateLimit-Reset": "1234"
+            }
         });
 
-        const handler = vi.fn().mockResolvedValue({
+        const handler = vi.fn(async () => ({
             statusCode: 200,
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ok: true }),
-        });
+            headers: { "Content-Type": "application/json" }
+        }));
 
         const wrapped = withRateLimit(handler, {
-            scope: "login",
-            capacity: 3,
-            refillRate: 1,
-            cost: 1,
-            keyFromEvent: () => "EMAIL#foo@example.com",
+            scope: "IP",
+            capacity: 10,
+            refillRate: 0.1
         });
 
-        const event = { body: "{}" };
-        const context = {};
+        const event = {
+            requestContext: { http: { sourceIp: "1.2.3.4" } }
+        };
 
-        const resp = await wrapped(event, context);
+        const resp = await wrapped(event, {});
 
-        expect(checkRateLimitBucketMock).toHaveBeenCalledWith({
-            scope: "login",
-            key: "EMAIL#foo@example.com",
-            capacity: 3,
-            refillRate: 1,
-            cost: 1,
-            windowSeconds: undefined,
+        expect(checkRateLimitBucket).toHaveBeenCalledTimes(1);
+        expect(checkRateLimitBucket).toHaveBeenCalledWith({
+            scope: "IP",
+            key: "1.2.3.4",
+            capacity: 10,
+            refillRate: 0.1,
+            cost: 1
         });
 
-        expect(handler).toHaveBeenCalledWith(event, context);
-
+        expect(handler).toHaveBeenCalledTimes(1);
         expect(resp.statusCode).toBe(200);
         expect(resp.headers["Content-Type"]).toBe("application/json");
-        expect(resp.headers["X-RateLimit-Limit"]).toBe("3");
-        expect(resp.headers["X-RateLimit-Remaining"]).toBe("2");
-        expect(resp.body).toBe(JSON.stringify({ ok: true }));
+        expect(resp.headers["X-RateLimit-Limit"]).toBe("10");
+        expect(resp.headers["X-RateLimit-Remaining"]).toBe("9");
     });
 
-    it("ne doit pas appeler le handler et renvoyer 429 quand le rate-limit refuse", async () => {
-        checkRateLimitBucketMock.mockResolvedValueOnce({
+    it("court-circuite et renvoie 429 quand not allowed", async () => {
+        checkRateLimitBucket.mockResolvedValue({
             allowed: false,
-            remaining: 0,
-            reset: 1000,
             status: 429,
+            remaining: 0,
+            reset: 999,
             headers: {
-                "X-RateLimit-Limit": "3",
+                "X-RateLimit-Limit": "10",
                 "X-RateLimit-Remaining": "0",
-                "Retry-After": "60",
-            },
+                "X-RateLimit-Reset": "999"
+            }
         });
 
         const handler = vi.fn();
 
         const wrapped = withRateLimit(handler, {
-            scope: "login",
-            capacity: 3,
-            refillRate: 1,
-            cost: 1,
-            keyFromEvent: () => "EMAIL#foo@example.com",
+            scope: "IP",
+            capacity: 10,
+            refillRate: 0.1
         });
 
-        const resp = await wrapped({ body: "{}" }, {});
+        const event = {
+            requestContext: { http: { sourceIp: "1.2.3.4" } }
+        };
+
+        const resp = await wrapped(event, {});
 
         expect(handler).not.toHaveBeenCalled();
-
         expect(resp.statusCode).toBe(429);
-        expect(resp.headers["X-RateLimit-Limit"]).toBe("3");
-        expect(resp.headers["X-RateLimit-Remaining"]).toBe("0");
-        expect(resp.headers["Retry-After"]).toBe("60");
         expect(resp.body).toBe(JSON.stringify({ message: "Rate limit exceeded" }));
+        expect(resp.headers["X-RateLimit-Remaining"]).toBe("0");
+    });
+
+    it("utilise le header x-forwarded-for quand sourceIp est absent", async () => {
+        checkRateLimitBucket.mockResolvedValue({
+            allowed: true,
+            remaining: 5,
+            reset: 10,
+            headers: {}
+        });
+
+        const handler = vi.fn(async () => ({
+            statusCode: 200,
+            body: "ok"
+        }));
+
+        const wrapped = withRateLimit(handler, {});
+
+        const event = {
+            headers: {
+                "x-forwarded-for": "5.6.7.8, 9.9.9.9"
+            },
+            requestContext: { http: {} }
+        };
+
+        await wrapped(event, {});
+
+        expect(checkRateLimitBucket).toHaveBeenCalledWith({
+            scope: "IP",
+            key: "5.6.7.8",
+            capacity: 10,
+            refillRate: 0.1,
+            cost: 1
+        });
     });
 });

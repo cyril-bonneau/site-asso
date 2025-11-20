@@ -1,66 +1,223 @@
-// checkRateLimitBucket.js (Option B: PK/TTL)
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+// backend/rateLimit/checkRateLimitBucket.js
+// Version découpée qui gère:
+// - le mode token-bucket (refill continu) via rateLimitCore + rateLimitStorageDdb
+// - le mode fenêtre fixe via windowSeconds (logique dédiée avec CAS)
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { computeBucketState } from "./rateLimitCore.js";
+import {
+    getDefaultDdb,
+    buildRateLimitKey,
+    loadBucket,
+    saveBucket,
+} from "./rateLimitStorageDdb.js";
+
+function makeLogger(scope) {
+    const prefix = `[rate-limit:${scope}]`;
+    return {
+        debug: (...args) => {
+            if (process.env.ENABLE_RL_LOGS === "true") {
+                console.log(prefix, ...args);
+            }
+        },
+        warn: (...args) => console.warn(prefix, ...args),
+    };
+}
 
 /**
- * checkRateLimitBucket
- * @param {Object} p
- * @param {string} p.scope - "IP" | "USER" | "ROUTE" | ...
- * @param {string} p.key - identifiant (ip, userId, etc.)
- * @param {number} p.capacity - nb max de tokens dans le seau
- * @param {number} p.refillRate - tokens par seconde
- * @param {number} [p.cost=1] - coût de l'opération
- * @param {string} [p.table=process.env.RATE_LIMIT_TABLE]
- * @param {number} [p.ttlSeconds=86400] - TTL anti-gaspillage (en secondes)
- * @returns {Promise<{allowed:boolean, remaining:number, reset:number, headers:Object, status?:number}>}
+ * Fabrique une fonction checkRateLimitBucket avec un client DDB injecté.
+ *
+ * @param {Object} [deps]
+ * @param {import("@aws-sdk/lib-dynamodb").DynamoDBDocumentClient} [deps.ddb]
  */
-export async function checkRateLimitBucket({
+export function createCheckRateLimitBucket({ ddb = getDefaultDdb() } = {}) {
+    /**
+     * @param {Object} p
+     * @param {string} p.scope
+     * @param {string} p.key
+     * @param {number} p.capacity
+     * @param {number} p.refillRate
+     * @param {number} [p.cost=1]
+     * @param {string} [p.table=process.env.RATE_LIMIT_TABLE]
+     * @param {number} [p.ttlSeconds=86400]
+     * @param {number} [p.nowMs=Date.now()]
+     * @param {number} [p.windowSeconds] - si défini => mode fenêtre
+     */
+    const fn = async function checkRateLimitBucket({
+        scope = "IP",
+        key,
+        capacity,
+        refillRate,
+        cost = 1,
+        table = process.env.RATE_LIMIT_TABLE,
+        ttlSeconds = 86400,
+        nowMs = Date.now(),
+        windowSeconds,
+    }) {
+        const { debug, warn } = makeLogger(scope);
+
+        if (!table) {
+            throw new Error("RATE_LIMIT_TABLE non défini");
+        }
+        if (!key) {
+            throw new Error("rate limit key manquant");
+        }
+
+        const nowSec = Math.floor(nowMs / 1000);
+        const pk = buildRateLimitKey(scope, key);
+
+        // ───────────── Mode FENÊTRE fixe (windowSeconds) ─────────────
+        if (windowSeconds) {
+            return await handleWindowMode({
+                ddb,
+                scope,
+                table,
+                pk,
+                capacity,
+                cost,
+                ttlSeconds,
+                windowSeconds,
+                nowSec,
+                debug,
+                warn,
+                retryFn: fn, // pour la récursion en cas de CAS
+            });
+        }
+
+        // ───────────── Mode TOKEN BUCKET (refill continu) ─────────────
+        let item = null;
+        try {
+            item = await loadBucket({ ddb, tableName: table, pk });
+            debug("Item actuel (token-bucket)", item);
+        } catch (e) {
+            warn("Erreur Get rate-limit (token-bucket)", e);
+        }
+
+        // Logique pure (pas d’AWS ici)
+        const {
+            allowed,
+            newTokens,
+            resetSec,
+            retryAfter,
+            capacity: capInt,
+        } = computeBucketState({
+            capacity,
+            refillRate,
+            cost,
+            nowSec,
+            item,
+        });
+
+        try {
+            await saveBucket({
+                ddb,
+                tableName: table,
+                pk,
+                tokens: newTokens,
+                nowSec,
+                ttlSeconds,
+            });
+            debug("Bucket sauvegardé (token-bucket)", {
+                tokens: newTokens,
+                resetSec,
+            });
+        } catch (e) {
+            // Fail-open: on log, mais on ne bloque pas la requête
+            warn("Erreur Update rate-limit (token-bucket)", e);
+        }
+
+        const headers = {
+            "X-RateLimit-Limit": String(capInt),
+            "X-RateLimit-Remaining": String(
+                Math.max(0, Math.floor(newTokens)),
+            ),
+            "X-RateLimit-Reset": String(resetSec),
+        };
+
+        if (!allowed && retryAfter > 0) {
+            headers["Retry-After"] = String(retryAfter);
+        }
+
+        if (!allowed) {
+            return {
+                allowed: false,
+                remaining: newTokens,
+                reset: resetSec,
+                headers,
+                status: 429,
+            };
+        }
+
+        return {
+            allowed: true,
+            remaining: newTokens,
+            reset: resetSec,
+            headers,
+        };
+    };
+
+    return fn;
+}
+
+// Instance par défaut : utilisée par withRateLimit et les Lambdas
+export const checkRateLimitBucket = createCheckRateLimitBucket();
+
+/**
+ * Mode fenêtre fixe (windowSeconds).
+ *
+ * C’est la logique que tu avais dans ta version monolithique:
+ * - Item inexistant → création avec tokens = capacity - cost
+ * - Fenêtre expirée → reset window, CAS sur ver
+ * - Fenêtre courante → consume ou refus + Retry-After
+ * - CAS conflict → on retente une fois via retryFn(...)
+ */
+async function handleWindowMode({
+    ddb,
     scope,
-    key,
+    table,
+    pk,
     capacity,
-    refillRate,
-    cost = 1,
-    table = process.env.RATE_LIMIT_TABLE,
-    ttlSeconds = 86400,
-    windowSeconds
+    cost,
+    ttlSeconds,
+    windowSeconds,
+    nowSec,
+    debug,
+    warn,
+    retryFn,
 }) {
-    const pkValue = `RL#${scope}#${key}`;
-    const nowMs = Date.now();
-    const nowSec = Math.floor(nowMs / 1000);
+    const pkValue = pk;
 
-    const log = (...args) => { console.log("[RL]", ...args); };
-    const warn = (...args) => { console.warn("[RL]", ...args); };
-
-    // 1) GET
+    // 1) GET (ConsistentRead)
     let item;
-
     try {
-        const res = await ddb.send(new GetCommand({
-            TableName: table,
-            Key: { PK: pkValue },
-            ConsistentRead: true
-        }));
+        const res = await ddb.send(
+            new GetCommand({
+                TableName: table,
+                Key: { PK: pkValue },
+                ConsistentRead: true,
+            }),
+        );
         item = res.Item;
+        debug("Item actuel (window mode)", item);
     } catch (e) {
-        warn("Get failed", e);
+        warn("Get failed (window mode)", e);
     }
 
-    if (windowSeconds) {
+    const capacityInt = Number.isFinite(capacity) ? capacity : 3;
+    const costInt = Number.isFinite(cost) ? cost : 1;
 
-        const capacityInt = Number.isFinite(capacity) ? capacity : 3;
-        const costInt = Number.isFinite(cost) ? cost : 1;
+    // ─── Cas 1: aucune entrée -> création de la fenêtre ───
+    if (!item) {
+        const remaining = Math.max(0, capacityInt - costInt);
+        const resetSec = nowSec + windowSeconds; // fin de la fenêtre
 
-        if (!item) {
-            const remaining = Math.max(0, capacityInt - costInt);
-            const resetSec = nowSec + windowSeconds; // fin de la fenêtre
-
-            try {
-                await ddb.send(new UpdateCommand({
+        try {
+            await ddb.send(
+                new UpdateCommand({
                     TableName: table,
                     Key: { PK: pkValue },
-                    UpdateExpression: "SET #tokens = :tokens, #win = :win, #ver = :ver, #ttl = :ttl",
+                    UpdateExpression:
+                        "SET #tokens = :tokens, #win = :win, #ver = :ver, #ttl = :ttl",
                     ExpressionAttributeNames: {
                         "#tokens": "tokens",
                         "#win": "windowStartedAt",
@@ -74,53 +231,65 @@ export async function checkRateLimitBucket({
                         ":ttl": nowSec + ttlSeconds,
                     },
                     ConditionExpression: "attribute_not_exists(#ver)", // création only
-                }));
-            } catch (err) {
-                warn("Create race (window mode), retrying", err?.name);
-                return await checkRateLimitBucket({
-                    scope,
-                    key,
-                    capacity,
-                    refillRate,
-                    cost,
-                    table,
-                    ttlSeconds,
-                    windowSeconds,
-                });
-            }
-
-            const headers = {
-                "X-RateLimit-Limit": String(capacityInt),
-                "X-RateLimit-Remaining": String(remaining),
-                "X-RateLimit-Reset": String(resetSec),
-            };
-
-            if (remaining <= 0) {
-                headers["Retry-After"] = String(windowSeconds);
-                return {
-                    allowed: false,
-                    remaining: 0,
-                    reset: resetSec,
-                    headers,
-                    status: 429,
-                };
-            }
-
-            return { allowed: true, remaining, reset: resetSec, headers };
+                }),
+            );
+        } catch (err) {
+            warn(
+                "Create race (window mode), retrying",
+                err?.name || err?.code,
+            );
+            // On relance le check complet une seule fois
+            return await retryFn({
+                scope,
+                key: pkValue.split("#").slice(2).join("#"), // IP ou email
+                capacity,
+                refillRate: 0, // ignoré en mode fenêtre
+                cost,
+                table,
+                ttlSeconds,
+                windowSeconds,
+            });
         }
 
-        const prevTokens = typeof item.tokens === "number" ? item.tokens : capacityInt;
-        const windowStartedAt = typeof item.windowStartedAt === "number" ? item.windowStartedAt : nowSec;
-        const elapsed = nowSec - windowStartedAt;
-        const resetSec = windowStartedAt + windowSeconds;
-        const prevVer = item.ver ?? 0;
-        const newVer = prevVer + 1;
+        const headers = {
+            "X-RateLimit-Limit": String(capacityInt),
+            "X-RateLimit-Remaining": String(remaining),
+            "X-RateLimit-Reset": String(resetSec),
+        };
 
-        if (elapsed >= windowSeconds) {
-            const remaining = Math.max(0, capacityInt - costInt);
+        if (remaining <= 0) {
+            headers["Retry-After"] = String(windowSeconds);
+            return {
+                allowed: false,
+                remaining: 0,
+                reset: resetSec,
+                headers,
+                status: 429,
+            };
+        }
 
-            try {
-                await ddb.send(new UpdateCommand({
+        return { allowed: true, remaining, reset: resetSec, headers };
+    }
+
+    // ─── Cas 2: fenêtre existante ───
+    const prevTokens =
+        typeof item.tokens === "number" ? item.tokens : capacityInt;
+    const windowStartedAt =
+        typeof item.windowStartedAt === "number"
+            ? item.windowStartedAt
+            : nowSec;
+    const elapsed = nowSec - windowStartedAt;
+    const resetSec = windowStartedAt + windowSeconds;
+    const prevVer = item.ver ?? 0;
+    const newVer = prevVer + 1;
+
+    // 2a) Fenêtre expirée → reset
+    if (elapsed >= windowSeconds) {
+        const remaining = Math.max(0, capacityInt - costInt);
+
+        try {
+            await ddb.send(
+                new UpdateCommand({
                     TableName: table,
                     Key: { PK: pkValue },
                     UpdateExpression:
@@ -137,80 +306,87 @@ export async function checkRateLimitBucket({
                         ":ver": newVer,
                         ":ttl": nowSec + ttlSeconds,
                     },
-                    ConditionExpression: "attribute_not_exists(#ver) OR #ver = :prevVer",
-                }));
-            } catch (err) {
-                if (err.name === "ConditionalCheckFailedException") {
-                    // quelqu'un a modifié entre temps → on retente une fois
-                    log("CAS conflict (window reset), retry once");
-                    return await checkRateLimitBucket({
-                        scope,
-                        key,
-                        capacity,
-                        refillRate,
-                        cost,
-                        table,
-                        ttlSeconds,
-                        windowSeconds,
-                    });
-                }
-                warn("Update failed (window reset)", err);
-                return {
-                    allowed: true,
-                    remaining: prevTokens,
-                    reset: nowSec,
-                    headers: {},
-                };
+                    ConditionExpression:
+                        "attribute_not_exists(#ver) OR #ver = :prevVer",
+                }),
+            );
+        } catch (err) {
+            if (err.name === "ConditionalCheckFailedException") {
+                // quelqu'un a modifié entre temps → on retente une fois
+                debug("CAS conflict (window reset), retry once");
+                return await retryFn({
+                    scope,
+                    key: pkValue.split("#").slice(2).join("#"),
+                    capacity,
+                    refillRate: 0,
+                    cost,
+                    table,
+                    ttlSeconds,
+                    windowSeconds,
+                });
             }
-
-            const headers = {
-                "X-RateLimit-Limit": String(capacityInt),
-                "X-RateLimit-Remaining": String(remaining),
-                "X-RateLimit-Reset": String(nowSec + windowSeconds),
-            };
-
-            if (remaining <= 0) {
-                headers["Retry-After"] = String(windowSeconds);
-                return {
-                    allowed: false,
-                    remaining: 0,
-                    reset: nowSec + windowSeconds,
-                    headers,
-                    status: 429,
-                };
-            }
-
+            warn("Update failed (window reset)", err);
+            // Fail-open pour ne pas bloquer en cas d’erreur infra
             return {
                 allowed: true,
-                remaining,
-                reset: nowSec + windowSeconds,
-                headers,
+                remaining: prevTokens,
+                reset: nowSec,
+                headers: {},
             };
         }
 
-        if (prevTokens < costInt) {
-            const retryAfter = Math.max(1, resetSec - nowSec);
+        const newReset = nowSec + windowSeconds;
+        const headers = {
+            "X-RateLimit-Limit": String(capacityInt),
+            "X-RateLimit-Remaining": String(remaining),
+            "X-RateLimit-Reset": String(newReset),
+        };
 
-            const headers = {
-                "X-RateLimit-Limit": String(capacityInt),
-                "X-RateLimit-Remaining": String(prevTokens),
-                "X-RateLimit-Reset": String(resetSec),
-                "Retry-After": String(retryAfter),
-            };
-
+        if (remaining <= 0) {
+            headers["Retry-After"] = String(windowSeconds);
             return {
                 allowed: false,
-                remaining: prevTokens,
-                reset: resetSec,
+                remaining: 0,
+                reset: newReset,
                 headers,
                 status: 429,
             };
         }
 
-        const newTokens = prevTokens - costInt;
+        return {
+            allowed: true,
+            remaining,
+            reset: newReset,
+            headers,
+        };
+    }
 
-        try {
-            await ddb.send(new UpdateCommand({
+    // 2b) Fenêtre en cours : plus de tokens → refus
+    if (prevTokens < costInt) {
+        const retryAfter = Math.max(1, resetSec - nowSec);
+
+        const headers = {
+            "X-RateLimit-Limit": String(capacityInt),
+            "X-RateLimit-Remaining": String(prevTokens),
+            "X-RateLimit-Reset": String(resetSec),
+            "Retry-After": String(retryAfter),
+        };
+
+        return {
+            allowed: false,
+            remaining: prevTokens,
+            reset: resetSec,
+            headers,
+            status: 429,
+        };
+    }
+
+    // 2c) Fenêtre en cours : on consomme les tokens
+    const newTokens = prevTokens - costInt;
+
+    try {
+        await ddb.send(
+            new UpdateCommand({
                 TableName: table,
                 Key: { PK: pkValue },
                 UpdateExpression:
@@ -227,160 +403,43 @@ export async function checkRateLimitBucket({
                     ":ver": newVer,
                     ":ttl": nowSec + ttlSeconds,
                 },
-                ConditionExpression: "attribute_not_exists(#ver) OR #ver = :prevVer",
-            }));
-        } catch (err) {
-            if (err.name === "ConditionalCheckFailedException") {
-                log("CAS conflict (window consume), retry once");
-                return await checkRateLimitBucket({
-                    scope,
-                    key,
-                    capacity,
-                    refillRate,
-                    cost,
-                    table,
-                    ttlSeconds,
-                    windowSeconds,
-                });
-            }
-            warn("Update failed (window consume)", err);
-            return {
-                allowed: true,
-                remaining: prevTokens,
-                reset: resetSec,
-                headers: {},
-            };
+                ConditionExpression:
+                    "attribute_not_exists(#ver) OR #ver = :prevVer",
+            }),
+        );
+    } catch (err) {
+        if (err.name === "ConditionalCheckFailedException") {
+            debug("CAS conflict (window consume), retry once");
+            return await retryFn({
+                scope,
+                key: pkValue.split("#").slice(2).join("#"),
+                capacity,
+                refillRate: 0,
+                cost,
+                table,
+                ttlSeconds,
+                windowSeconds,
+            });
         }
-
-        const headers = {
-            "X-RateLimit-Limit": String(capacityInt),
-            "X-RateLimit-Remaining": String(newTokens),
-            "X-RateLimit-Reset": String(resetSec),
-        };
-
+        warn("Update failed (window consume)", err);
         return {
             allowed: true,
-            remaining: newTokens,
+            remaining: prevTokens,
             reset: resetSec,
-            headers,
+            headers: {},
         };
-    }
-
-    if (!item) {
-        // Première fois : on remplit au max puis on consomme 'cost'
-        const remaining = Math.max(0, capacity - cost);
-
-        let resetSec;
-        if (remaining > 0) {
-            resetSec = nowSec;
-        } else {
-            resetSec = nowSec + Math.ceil(cost / refillRate);
-        }
-
-        try {
-            await ddb.send(new UpdateCommand({
-                TableName: table,
-                Key: { PK: pkValue },
-                UpdateExpression: "SET #tokens = :tokens, #last = :last, #cap = :cap, #rate = :rate, #ver = :ver, #ttl = :ttl",
-                ExpressionAttributeNames: {
-                    "#tokens": "tokens",
-                    "#last": "lastRefill",
-                    "#cap": "capacity",
-                    "#rate": "refillRate",
-                    "#ver": "ver",
-                    "#ttl": "TTL"            // ← attribut TTL en base
-                },
-                ExpressionAttributeValues: {
-                    ":tokens": remaining,
-                    ":last": nowMs,
-                    ":cap": capacity,
-                    ":rate": refillRate,
-                    ":ver": 1,
-                    ":ttl": nowSec + ttlSeconds
-                },
-                ConditionExpression: "attribute_not_exists(#ver)" // crée uniquement si absent
-            }));
-        } catch (e) {
-            // Conflit de création → on retente via la voie normale (rare)
-            warn("Create race, retrying with read-modify-write", e?.name);
-            return await checkRateLimitBucket({ scope, key, capacity, refillRate, cost, table, ttlSeconds });
-        }
-
-        const headers = {
-            "X-RateLimit-Limit": String(capacity),
-            "X-RateLimit-Remaining": String(remaining),
-            "X-RateLimit-Reset": String(resetSec)
-        };
-
-        if (remaining <= 0) {
-            const retryAfter = Math.ceil(cost / refillRate);
-            headers["Retry-After"] = String(retryAfter);
-            return { allowed: false, remaining: 0, reset: resetSec, headers, status: 429 };
-        }
-        return { allowed: true, remaining, reset: resetSec, headers };
-    }
-
-    // 2) Calcul local du refill
-    const prevTokens = typeof item.tokens === "number" ? item.tokens : capacity;
-    const prevLast = typeof item.lastRefill === "number" ? item.lastRefill : nowMs;
-    const deltaSec = Math.max(0, (nowMs - prevLast) / 1000);
-    const refill = Math.floor(deltaSec * refillRate);
-    const afterRefill = Math.min(capacity, prevTokens + refill);
-    const canPay = afterRefill >= cost;
-    const newTokens = canPay ? (afterRefill - cost) : afterRefill; // ← soustraction corrigée
-    const newLast = refill > 0 ? nowMs : prevLast;
-    const newVer = (item.ver ?? 0) + 1;
-
-    const need = Math.max(0, cost - afterRefill);
-    const retryAfter = need > 0 ? Math.ceil(need / refillRate) : 0;
-    const resetSec = retryAfter > 0 ? nowSec + retryAfter : nowSec;
-
-    // 3) UPDATE (CAS via ver)
-    const tryUpdate = async () => {
-        await ddb.send(new UpdateCommand({
-            TableName: table,
-            Key: { PK: pkValue },
-            UpdateExpression: "SET #tokens = :tokens, #last = :last, #ver = :ver, #ttl = :ttl",
-            ConditionExpression: "attribute_not_exists(#ver) OR #ver = :prevVer",
-            ExpressionAttributeNames: {
-                "#tokens": "tokens",
-                "#last": "lastRefill",
-                "#ver": "ver",
-                "#ttl": "TTL"            // ← attribut TTL en base
-            },
-            ExpressionAttributeValues: {
-                ":tokens": newTokens,
-                ":last": newLast,
-                ":ver": newVer,
-                ":prevVer": item.ver ?? 0,
-                ":ttl": nowSec + ttlSeconds
-            }
-        }));
-    };
-
-    try {
-        await tryUpdate();
-    } catch (e) {
-        if (e.name === "ConditionalCheckFailedException") {
-            log("CAS conflict, retry once");
-            const retry = await checkRateLimitBucket({ scope, key, capacity, refillRate, cost, table, ttlSeconds });
-            return retry;
-        }
-        warn("Update failed", e);
-        // En cas d’erreur infra, on préfère laisser passer (optionnel)
-        return { allowed: true, remaining: prevTokens, reset: nowSec, headers: {} };
     }
 
     const headers = {
-        "X-RateLimit-Limit": String(capacity),
+        "X-RateLimit-Limit": String(capacityInt),
         "X-RateLimit-Remaining": String(newTokens),
-        "X-RateLimit-Reset": String(resetSec)
+        "X-RateLimit-Reset": String(resetSec),
     };
 
-    if (!canPay) {
-        if (retryAfter > 0) headers["Retry-After"] = String(retryAfter);
-        return { allowed: false, remaining: newTokens, reset: resetSec, headers, status: 429 };
-    }
-
-    return { allowed: true, remaining: newTokens, reset: resetSec, headers };
+    return {
+        allowed: true,
+        remaining: newTokens,
+        reset: resetSec,
+        headers,
+    };
 }
