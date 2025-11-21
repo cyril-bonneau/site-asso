@@ -22,7 +22,7 @@ export function addUserProfileUpdateOperation({ userId, firstName, lastName, }) 
         exprValues[":lastName"] = lastName;
         updateExpr += ", #lastName = :lastName";
     }
-    return {
+    return [{
         Update: {
             TableName: USER_TABLE,
             Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
@@ -32,5 +32,5 @@ export function addUserProfileUpdateOperation({ userId, firstName, lastName, }) 
             ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         }
-    }
+    }]
 }

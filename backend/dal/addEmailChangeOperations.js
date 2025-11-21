@@ -3,7 +3,7 @@ const USER_TABLE = process.env.USER_TABLE;;
 
 export function addEmailChangeOperations({ userId, oldEmail, newEmail }) {
 
-    return {
+    return [{
         Delete: {
             TableName: AUTH_TABLE,
             Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
@@ -79,5 +79,5 @@ export function addEmailChangeOperations({ userId, oldEmail, newEmail }) {
                 ":updatedAt": new Date().toISOString(),
             }
         }
-    }
+    }]
 }
