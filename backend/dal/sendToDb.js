@@ -12,13 +12,13 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 
 export async function sendToDb(transactItems) {
     try {
-        return await ddb.send(
+        await ddb.send(
             new TransactWriteCommand({
                 TransactItems: transactItems,
                 ReturnConsumedCapacity: "TOTAL",
             })
         );
     } catch (err) {
-        json(err.statusCode, { ok: false, message: err.message })
+        return json(err.statusCode, { ok: false, message: err.message })
     }
 }

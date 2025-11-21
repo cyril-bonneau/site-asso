@@ -150,8 +150,7 @@ async function updateUserTransactional(params) {
 
         console.log("final transactItems", transactItems)
 
-        const result = await sendToDb(transactItems)
-        console.log({ result })
+        await sendToDb(transactItems)
 
         // await ddb.send(
         //     new TransactWriteCommand({
