@@ -126,7 +126,7 @@ async function updateUserTransactional(params) {
                 transactItems
             })
             console.log("updatePasswordCore", updatePasswordCoreResult)
-            transactItems.push(...updatePasswordCoreResult)
+            transactItems.push(updatePasswordCoreResult)
             console.log("transactItems hasPasswordChange", transactItems)
         } catch (err) {
             if (err.code === "WRONG_PASSWORD") {

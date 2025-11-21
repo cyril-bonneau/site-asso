@@ -14,7 +14,7 @@ export async function updatePasswordCore({ userId, oldPassword, newPassword }) {
 
     const hashedPassword = await hashPassword(newPassword)
 
-    return [{
+    return {
         Update: {
             TableName: AUTH_TABLE,
             Key: { PK: `USER#${userId}`, SK: "AUTH" },
@@ -30,5 +30,5 @@ export async function updatePasswordCore({ userId, oldPassword, newPassword }) {
             ConditionExpression: "attribute_exists(PK)",
             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
         },
-    }]
+    }
 }
