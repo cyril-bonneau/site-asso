@@ -18,7 +18,7 @@ export async function checkPasswordByUserId({ password, userId }) {
 
     if (!auth || !auth.passwordHash) {
         console.log(auth)
-        throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
+        throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH", auth);
     }
 
     return verifyPassword(auth.passwordHash, password)

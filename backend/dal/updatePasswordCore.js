@@ -14,21 +14,27 @@ export async function updatePasswordCore({ userId, oldPassword, newPassword }) {
 
     const hashedPassword = await hashPassword(newPassword)
 
-    return {
-        Update: {
-            TableName: AUTH_TABLE,
-            Key: { PK: `USER#${userId}`, SK: "AUTH" },
-            UpdateExpression: "SET #passwordHash = :passwordHash, #updatedAt = :updatedAt",
-            ExpressionAttributeNames: {
-                "#passwordHash": "passwordHash",
-                "#updatedAt": "updatedAt"
+    const transact = []
+
+    transact.push(
+        {
+            Update: {
+                TableName: AUTH_TABLE,
+                Key: { PK: `USER#${userId}`, SK: "AUTH" },
+                UpdateExpression: "SET #passwordHash = :passwordHash, #updatedAt = :updatedAt",
+                ExpressionAttributeNames: {
+                    "#passwordHash": "passwordHash",
+                    "#updatedAt": "updatedAt"
+                },
+                ExpressionAttributeValues: {
+                    ":passwordHash": hashedPassword,
+                    ":updatedAt": new Date().toISOString()
+                },
+                ConditionExpression: "attribute_exists(PK)",
+                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
             },
-            ExpressionAttributeValues: {
-                ":passwordHash": hashedPassword,
-                ":updatedAt": new Date().toISOString()
-            },
-            ConditionExpression: "attribute_exists(PK)",
-            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        },
-    }
+        }
+    )
+
+    return transact
 }

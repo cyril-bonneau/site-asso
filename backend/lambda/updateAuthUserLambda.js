@@ -9,7 +9,7 @@ import { withRateLimit } from "../rateLimit/withRateLimit.js";
 // import { hashPassword } from "../auth/auth.js";
 import { json } from "../helpers/json.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
-import { addEmailChangeOperations } from "../dal/addEmailChangeOperations.js";
+// import { addEmailChangeOperations } from "../dal/addEmailChangeOperations.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { updatePasswordCore } from "../dal/updatePasswordCore.js"
 import { sendToDb } from "../dal/sendToDb.js"
@@ -43,11 +43,11 @@ export const handler = async (event) => {
         const newPassword = data.newPassword
 
         const hasEmailChange =
-            oldEmail !== undefined && newEmail !== undefined && oldEmail !== newEmail;
+            oldEmail && newEmail && oldEmail !== newEmail;
         const hasProfileChange =
-            firstName !== undefined || lastName !== undefined;
+            firstName || lastName;
         const hasPasswordChange =
-            oldPassword !== undefined && newPassword !== undefined;
+            oldPassword && newPassword;
 
         if ((oldPassword !== undefined) !== (newPassword !== undefined)) {
             return json(400, { ok: false, message: "MISSING_PASSWORD_FIELDS" });
@@ -93,40 +93,42 @@ async function updateUserTransactional(params) {
 
     const transactItems = [];
 
-    if (hasEmailChange) {
-        const addEmailChangeOperationsResult = addEmailChangeOperations({
-            transactItems,
+    if (hasEmailChange || hasProfileChange) {
+        const addUserProfileUpdateOperationResult = addUserProfileUpdateOperation({
             userId,
             oldEmail,
             newEmail,
+            firstName,
+            lastName,
+            hasEmailChange,
+            hasProfileChange
         });
-        console.log("addEmailChangeOperationsResult", addEmailChangeOperationsResult)
-        transactItems.push(...addEmailChangeOperationsResult)
+        transactItems.push(...addUserProfileUpdateOperationResult)
         console.log("transactItems hasEmailChange", transactItems)
     }
 
-    if (hasProfileChange) {
-        const addUserProfileUpdateOperationResult = addUserProfileUpdateOperation({
-            transactItems,
-            userId,
-            firstName,
-            lastName,
-        });
-        console.log("addUserProfileUpdateOperationResult", addUserProfileUpdateOperationResult)
-        transactItems.push(...addUserProfileUpdateOperationResult)
-        console.log("transactItems hasProfileChange", transactItems)
-    }
+    // if (hasProfileChange) {
+    //     const addUserProfileUpdateOperationResult = addUserProfileUpdateOperation({
+    //         transactItems,
+    //         userId,
+    //         firstName,
+    //         lastName,
+    //         hasEmailChange,
+    //         hasProfileChange
+    //     });
+    //     console.log("addUserProfileUpdateOperationResult", addUserProfileUpdateOperationResult)
+    //     transactItems.push(...addUserProfileUpdateOperationResult)
+    //     console.log("transactItems hasProfileChange", transactItems)
+    // }
 
     if (hasPasswordChange) {
         try {
-            const updatePasswordCoreResult = await updatePassword({
+            const updatePasswordResult = await updatePassword({
                 userId,
                 oldPassword,
-                newPassword,
-                transactItems
+                newPassword
             })
-            console.log("updatePasswordCore", updatePasswordCoreResult)
-            transactItems.push(updatePasswordCoreResult)
+            transactItems.push(...updatePasswordResult)
             console.log("transactItems hasPasswordChange", transactItems)
         } catch (err) {
             if (err.code === "WRONG_PASSWORD") {
