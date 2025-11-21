@@ -33,7 +33,6 @@ async function getAuthByUserId(userId) {
                 ProjectionExpression: "passwordHash"
             })
         )
-        console.log(Item)
         return Item
 
     } catch (err) {
