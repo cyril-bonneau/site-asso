@@ -3,14 +3,10 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
-import { checkPasswordByEmail } from "../helpers/checkPasswordByEmail";
+import { checkPasswordByEmail } from "../dal/checkPasswordByEmail";
 import { json } from "../helpers/json";
 import { normalizeEmail } from "../helpers/toolbox";
 import { withRateLimit } from "../rateLimit/withRateLimit";
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
 
 export const handler = async (event) => {
     try {

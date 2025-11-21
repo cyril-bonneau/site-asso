@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 // --- Mocks hoistés ---
 
 // On mocke maintenant checkPasswordByUserId
-vi.mock('../helpers/checkPasswordByUserId.js', () => {
+vi.mock('../dal/checkPasswordByUserId.js', () => {
     const checkPasswordByUserIdMock = vi.fn()
     return {
         checkPasswordByUserId: (...args) => checkPasswordByUserIdMock(...args),

@@ -1,21 +1,25 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-    DynamoDBDocumentClient,
-    TransactWriteCommand
-} from "@aws-sdk/lib-dynamodb";
+// import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+// import {
+//     DynamoDBDocumentClient,
+//     TransactWriteCommand
+// } from "@aws-sdk/lib-dynamodb";
 
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
-import { checkPasswordByUserId } from "../helpers/checkPasswordByUserId.js";
-import { hashPassword } from "../auth/auth.js";
+// import { checkPasswordByUserId } from "../helpers/checkPasswordByUserId.js";
+// import { hashPassword } from "../auth/auth.js";
 import { json } from "../helpers/json.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
+import { addEmailChangeOperations } from "../dal/addEmailChangeOperations.js";
+import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
+import { updatePasswordCore } from "../dal/updatePasswordCore.js"
+import { sendToDb } from "../dal/sendToDb.js"
 
-const AUTH_TABLE = process.env.AUTH_TABLE;
-const USER_TABLE = process.env.USER_TABLE;
+// const AUTH_TABLE = process.env.AUTH_TABLE;
+// const USER_TABLE = process.env.USER_TABLE;
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
+// const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+//     marshallOptions: { removeUndefinedValues: true },
+// });
 
 export const handler = async (event) => {
     try {
@@ -90,31 +94,40 @@ async function updateUserTransactional(params) {
     const transactItems = [];
 
     if (hasEmailChange) {
-        addEmailChangeOperations({
+        const addEmailChangeOperationsResult = addEmailChangeOperations({
             transactItems,
             userId,
             oldEmail,
             newEmail,
         });
+        console.log("addEmailChangeOperationsResult", addEmailChangeOperationsResult)
+        transactItems.push(addEmailChangeOperationsResult)
+        console.log("transactItems hasEmailChange", transactItems)
     }
 
     if (hasProfileChange) {
-        addUserProfileUpdateOperation({
+        const addUserProfileUpdateOperationResult = addUserProfileUpdateOperation({
             transactItems,
             userId,
             firstName,
             lastName,
         });
+        console.log("addUserProfileUpdateOperationResult", addUserProfileUpdateOperationResult)
+        transactItems.push(addUserProfileUpdateOperationResult)
+        console.log("transactItems hasProfileChange", transactItems)
     }
 
     if (hasPasswordChange) {
         try {
-            await updatePassword({
+            const updatePasswordCoreResult = await updatePassword({
                 userId,
                 oldPassword,
                 newPassword,
                 transactItems
             })
+            console.log("updatePasswordCore", updatePasswordCoreResult)
+            transactItems.push(updatePasswordCoreResult)
+            console.log("transactItems hasPasswordChange", transactItems)
         } catch (err) {
             if (err.code === "WRONG_PASSWORD") {
                 return json(403, { ok: false, message: "WRONG_PASSWORD" });
@@ -135,12 +148,14 @@ async function updateUserTransactional(params) {
             opsCount: transactItems.length,
         });
 
-        await ddb.send(
-            new TransactWriteCommand({
-                TransactItems: transactItems,
-                ReturnConsumedCapacity: "TOTAL",
-            })
-        );
+        await sendToDb(transactItems)
+
+        // await ddb.send(
+        //     new TransactWriteCommand({
+        //         TransactItems: transactItems,
+        //         ReturnConsumedCapacity: "TOTAL",
+        //     })
+        // );
 
         return json(200, {
             ok: true, updated: {
@@ -169,166 +184,166 @@ async function updateUserTransactional(params) {
     }
 }
 
-function addEmailChangeOperations({ transactItems, userId, oldEmail, newEmail }) {
+// function addEmailChangeOperations({ transactItems, userId, oldEmail, newEmail }) {
 
-    transactItems.push(
-        {
-            Delete: {
-                TableName: AUTH_TABLE,
-                Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
-            },
-        },
-        {
-            Delete: {
-                TableName: USER_TABLE,
-                Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
-            },
-        }
-    );
+//     transactItems.push(
+//         {
+//             Delete: {
+//                 TableName: AUTH_TABLE,
+//                 Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
+//             },
+//         },
+//         {
+//             Delete: {
+//                 TableName: USER_TABLE,
+//                 Key: { PK: `EMAIL#${oldEmail}`, SK: "UNIQUE" },
+//             },
+//         }
+//     );
 
-    transactItems.push(
-        {
-            Put: {
-                TableName: AUTH_TABLE,
-                Item: {
-                    PK: `EMAIL#${newEmail}`,
-                    SK: "UNIQUE",
-                    userId: `USER#${userId}`,
-                    createdAt: new Date().toISOString(),
-                },
-                ConditionExpression: "attribute_not_exists(PK)",
-                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-            },
-        },
-        {
-            Put: {
-                TableName: USER_TABLE,
-                Item: {
-                    PK: `EMAIL#${newEmail}`,
-                    SK: "UNIQUE",
-                    userId,
-                    GSI1SK: newEmail,
-                    createdAt: new Date().toISOString(),
-                },
-                ConditionExpression: "attribute_not_exists(PK)",
-                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-            },
-        }
-    );
+//     transactItems.push(
+//         {
+//             Put: {
+//                 TableName: AUTH_TABLE,
+//                 Item: {
+//                     PK: `EMAIL#${newEmail}`,
+//                     SK: "UNIQUE",
+//                     userId: `USER#${userId}`,
+//                     createdAt: new Date().toISOString(),
+//                 },
+//                 ConditionExpression: "attribute_not_exists(PK)",
+//                 ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+//             },
+//         },
+//         {
+//             Put: {
+//                 TableName: USER_TABLE,
+//                 Item: {
+//                     PK: `EMAIL#${newEmail}`,
+//                     SK: "UNIQUE",
+//                     userId,
+//                     GSI1SK: newEmail,
+//                     createdAt: new Date().toISOString(),
+//                 },
+//                 ConditionExpression: "attribute_not_exists(PK)",
+//                 ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+//             },
+//         }
+//     );
 
-    transactItems.push(
-        {
-            Update: {
-                TableName: AUTH_TABLE,
-                Key: { PK: `USER#${userId}`, SK: "AUTH" },
-                UpdateExpression:
-                    "SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt",
-                ExpressionAttributeNames: {
-                    "#email": "email",
-                    "#GSI1PK": "GSI1PK",
-                    "#updatedAt": "updatedAt",
-                },
-                ExpressionAttributeValues: {
-                    ":email": newEmail,
-                    ":GSI1PK": `EMAIL#${newEmail}`,
-                    ":updatedAt": new Date().toISOString(),
-                },
-                ConditionExpression: "attribute_exists(PK)",
-                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-            },
-        },
-        {
-            Update: {
-                TableName: USER_TABLE,
-                Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
-                UpdateExpression:
-                    "SET #email = :email, #GSI1SK = :GSI1SK, #updatedAt = :updatedAt",
-                ExpressionAttributeNames: {
-                    "#email": "email",
-                    "#GSI1SK": "GSI1SK",
-                    "#updatedAt": "updatedAt",
-                },
-                ExpressionAttributeValues: {
-                    ":email": newEmail,
-                    ":GSI1SK": newEmail,
-                    ":updatedAt": new Date().toISOString(),
-                }
-            }
-        }
-    );
-}
+//     transactItems.push(
+//         {
+//             Update: {
+//                 TableName: AUTH_TABLE,
+//                 Key: { PK: `USER#${userId}`, SK: "AUTH" },
+//                 UpdateExpression:
+//                     "SET #email = :email, #GSI1PK = :GSI1PK, #updatedAt = :updatedAt",
+//                 ExpressionAttributeNames: {
+//                     "#email": "email",
+//                     "#GSI1PK": "GSI1PK",
+//                     "#updatedAt": "updatedAt",
+//                 },
+//                 ExpressionAttributeValues: {
+//                     ":email": newEmail,
+//                     ":GSI1PK": `EMAIL#${newEmail}`,
+//                     ":updatedAt": new Date().toISOString(),
+//                 },
+//                 ConditionExpression: "attribute_exists(PK)",
+//                 ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+//             },
+//         },
+//         {
+//             Update: {
+//                 TableName: USER_TABLE,
+//                 Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
+//                 UpdateExpression:
+//                     "SET #email = :email, #GSI1SK = :GSI1SK, #updatedAt = :updatedAt",
+//                 ExpressionAttributeNames: {
+//                     "#email": "email",
+//                     "#GSI1SK": "GSI1SK",
+//                     "#updatedAt": "updatedAt",
+//                 },
+//                 ExpressionAttributeValues: {
+//                     ":email": newEmail,
+//                     ":GSI1SK": newEmail,
+//                     ":updatedAt": new Date().toISOString(),
+//                 }
+//             }
+//         }
+//     );
+// }
 
-function addUserProfileUpdateOperation({
-    transactItems,
-    userId,
-    firstName,
-    lastName,
-}) {
-    const exprNames = {
-        "#updatedAt": "updatedAt",
-    };
+// function addUserProfileUpdateOperation({
+//     transactItems,
+//     userId,
+//     firstName,
+//     lastName,
+// }) {
+//     const exprNames = {
+//         "#updatedAt": "updatedAt",
+//     };
 
-    const exprValues = {
-        ":updatedAt": new Date().toISOString(),
-    };
+//     const exprValues = {
+//         ":updatedAt": new Date().toISOString(),
+//     };
 
-    let updateExpr = "SET #updatedAt = :updatedAt";
+//     let updateExpr = "SET #updatedAt = :updatedAt";
 
-    if (firstName !== undefined) {
-        exprNames["#firstName"] = "firstName";
-        exprValues[":firstName"] = firstName;
-        updateExpr += ", #firstName = :firstName";
-    }
+//     if (firstName !== undefined) {
+//         exprNames["#firstName"] = "firstName";
+//         exprValues[":firstName"] = firstName;
+//         updateExpr += ", #firstName = :firstName";
+//     }
 
-    if (lastName !== undefined) {
-        exprNames["#lastName"] = "lastName";
-        exprValues[":lastName"] = lastName;
-        updateExpr += ", #lastName = :lastName";
-    }
+//     if (lastName !== undefined) {
+//         exprNames["#lastName"] = "lastName";
+//         exprValues[":lastName"] = lastName;
+//         updateExpr += ", #lastName = :lastName";
+//     }
 
-    transactItems.push({
-        Update: {
-            TableName: USER_TABLE,
-            Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
-            UpdateExpression: updateExpr,
-            ExpressionAttributeNames: exprNames,
-            ExpressionAttributeValues: exprValues,
-            ConditionExpression: "attribute_exists(PK)",
-            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        },
-    });
-}
+//     transactItems.push({
+//         Update: {
+//             TableName: USER_TABLE,
+//             Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
+//             UpdateExpression: updateExpr,
+//             ExpressionAttributeNames: exprNames,
+//             ExpressionAttributeValues: exprValues,
+//             ConditionExpression: "attribute_exists(PK)",
+//             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+//         },
+//     });
+// }
 
-async function updatePasswordCore({ userId, oldPassword, newPassword, transactItems }) {
+// async function updatePasswordCore({ userId, oldPassword, newPassword, transactItems }) {
 
-    const test = await checkPasswordByUserId({ password: oldPassword, userId })
+//     const test = await checkPasswordByUserId({ password: oldPassword, userId })
 
-    if (!test) {
-        const err = new Error("Wrong password");
-        err.code = "WRONG_PASSWORD";
-        throw err;
-    }
+//     if (!test) {
+//         const err = new Error("Wrong password");
+//         err.code = "WRONG_PASSWORD";
+//         throw err;
+//     }
 
-    const hashedPassword = await hashPassword(newPassword)
+//     const hashedPassword = await hashPassword(newPassword)
 
-    transactItems.push({
-        Update: {
-            TableName: AUTH_TABLE,
-            Key: { PK: `USER#${userId}`, SK: "AUTH" },
-            UpdateExpression: "SET #passwordHash = :passwordHash, #updatedAt = :updatedAt",
-            ExpressionAttributeNames: {
-                "#passwordHash": "passwordHash",
-                "#updatedAt": "updatedAt"
-            },
-            ExpressionAttributeValues: {
-                ":passwordHash": hashedPassword,
-                ":updatedAt": new Date().toISOString()
-            },
-            ConditionExpression: "attribute_exists(PK)",
-            ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-        },
-    });
-}
+//     transactItems.push({
+//         Update: {
+//             TableName: AUTH_TABLE,
+//             Key: { PK: `USER#${userId}`, SK: "AUTH" },
+//             UpdateExpression: "SET #passwordHash = :passwordHash, #updatedAt = :updatedAt",
+//             ExpressionAttributeNames: {
+//                 "#passwordHash": "passwordHash",
+//                 "#updatedAt": "updatedAt"
+//             },
+//             ExpressionAttributeValues: {
+//                 ":passwordHash": hashedPassword,
+//                 ":updatedAt": new Date().toISOString()
+//             },
+//             ConditionExpression: "attribute_exists(PK)",
+//             ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+//         },
+//     });
+// }
 
 const updatePassword = withRateLimit(updatePasswordCore, {
     scope: "updatePassword",
