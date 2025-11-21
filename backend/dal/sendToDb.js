@@ -19,6 +19,7 @@ export async function sendToDb(transactItems) {
             })
         );
     } catch (err) {
-        return json(err.statusCode, { ok: false, message: err.message })
+        console.error("DDB TRANSACT ERROR:", err)
+        throw err
     }
 }
