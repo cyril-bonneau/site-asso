@@ -32,7 +32,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => {
 // --- Imports APRÈS les mocks ---
 
 import { handler as removeAuthUserHandler } from '../lambda/removeAuthUserLambda.js'
-import { __mocks as checkPasswordByUserIdMocks } from '../helpers/checkPasswordByUserId.js'
+import { __mocks as checkPasswordByUserIdMocks } from '../dal/checkPasswordByUserId.js'
 import { __mocks as ddbLibMocks } from '@aws-sdk/lib-dynamodb'
 
 const { checkPasswordByUserIdMock } = checkPasswordByUserIdMocks
