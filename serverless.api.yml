@@ -184,6 +184,31 @@ functions:
           method: PATCH
           path: /updateUser
 
+  updateAuthUserPassword:
+    handler: backend/lambda/updateAuthUserPasswordLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+      RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:GetItem
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+          
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+    events:
+      - httpApi: 
+          method: PUT
+          path: /updatePassword
+
   removeAuthUser:
     handler: backend/lambda/removeAuthUserLambda.handler
     memorySize: 1024

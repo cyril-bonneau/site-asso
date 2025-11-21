@@ -1,8 +1,3 @@
-import {
-    DynamoDBClient
-} from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-
 import { checkPasswordByEmail } from "../dal/checkPasswordByEmail";
 import { json } from "../helpers/json.js";
 import { normalizeEmail } from "../helpers/toolbox";
