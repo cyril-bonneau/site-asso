@@ -1,5 +1,5 @@
-import { checkPasswordByUserId } from "./checkPasswordByUserId";
-import { hashPassword } from "../auth/auth";
+import { checkPasswordByUserId } from "./checkPasswordByUserId.js";
+import { hashPassword } from "../auth/auth.js";
 
 export async function updatePasswordCore({ userId, oldPassword, newPassword }) {
     const test = await checkPasswordByUserId({ password: oldPassword, userId })
