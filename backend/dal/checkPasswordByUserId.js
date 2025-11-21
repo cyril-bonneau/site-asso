@@ -26,13 +26,15 @@ export async function checkPasswordByUserId({ password, userId }) {
 
 async function getAuthByUserId(userId) {
     try {
-        return { Item } = await ddb.send(
+        let data = await ddb.send(
             new GetCommand({
                 TableName: AUTH_TABLE,
                 Key: { PK: `USER#${userId}`, SK: "AUTH" },
                 ProjectionExpression: "passwordHash"
             })
         )
+        console.log("data retreived in checkpasswordbyuserid", data)
+        return data
 
     } catch (err) {
         return err
