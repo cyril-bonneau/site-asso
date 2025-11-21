@@ -1,6 +1,8 @@
 import { checkPasswordByUserId } from "./checkPasswordByUserId.js";
 import { hashPassword } from "../auth/auth.js";
 
+const AUTH_TABLE = process.env.AUTH_TABLE;
+
 export async function updatePasswordCore({ userId, oldPassword, newPassword }) {
     const test = await checkPasswordByUserId({ password: oldPassword, userId })
 
