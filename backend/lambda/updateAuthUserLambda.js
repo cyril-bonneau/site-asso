@@ -103,6 +103,7 @@ async function updateUserTransactional(params) {
             hasEmailChange,
             hasProfileChange
         });
+        console.log("type addUserProfileUpdateOperationResult", typeof addUserProfileUpdateOperationResult, Array.isArray(addUserProfileUpdateOperationResult));
         transactItems.push(...addUserProfileUpdateOperationResult)
         console.log("transactItems hasEmailChange", transactItems)
     }
@@ -123,11 +124,12 @@ async function updateUserTransactional(params) {
 
     if (hasPasswordChange) {
         try {
-            const updatePasswordResult = await updatePassword({
+            const updatePasswordResult = await updatePasswordCore({
                 userId,
                 oldPassword,
                 newPassword
             })
+            console.log("type updatePasswordResult", typeof updatePasswordResult, Array.isArray(updatePasswordResult));
             transactItems.push(...updatePasswordResult)
             console.log("transactItems hasPasswordChange", transactItems)
         } catch (err) {
