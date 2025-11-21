@@ -206,7 +206,7 @@ functions:
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
     events:
       - httpApi: 
-          method: PUT
+          method: PATCH
           path: /updatePassword
 
   removeAuthUser:
