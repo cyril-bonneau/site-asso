@@ -33,8 +33,9 @@ async function getAuthByUserId(userId) {
                 ProjectionExpression: "passwordHash"
             })
         )
-        console.log("data retreived in checkpasswordbyuserid", data)
-        return data
+
+        console.log(data.Item)
+        return data.item
 
     } catch (err) {
         return err
