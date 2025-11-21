@@ -101,7 +101,7 @@ async function updateUserTransactional(params) {
             newEmail,
         });
         console.log("addEmailChangeOperationsResult", addEmailChangeOperationsResult)
-        transactItems.push({ addEmailChangeOperationsResult })
+        transactItems.push(addEmailChangeOperationsResult)
         console.log("transactItems hasEmailChange", transactItems)
     }
 
@@ -113,7 +113,7 @@ async function updateUserTransactional(params) {
             lastName,
         });
         console.log("addUserProfileUpdateOperationResult", addUserProfileUpdateOperationResult)
-        transactItems.push({ addUserProfileUpdateOperationResult })
+        transactItems.push(addUserProfileUpdateOperationResult)
         console.log("transactItems hasProfileChange", transactItems)
     }
 
@@ -126,7 +126,7 @@ async function updateUserTransactional(params) {
                 transactItems
             })
             console.log("updatePasswordCore", updatePasswordCoreResult)
-            transactItems.push({ updatePasswordCoreResult })
+            transactItems.push(updatePasswordCoreResult)
             console.log("transactItems hasPasswordChange", transactItems)
         } catch (err) {
             if (err.code === "WRONG_PASSWORD") {
