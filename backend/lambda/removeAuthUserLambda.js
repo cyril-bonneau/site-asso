@@ -4,7 +4,7 @@ import {
 import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 
 import { checkPasswordByUserId } from "../dal/checkPasswordByUserId.js";
-import { json } from "../helpers/json";
+import { json } from "../helpers/json.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 

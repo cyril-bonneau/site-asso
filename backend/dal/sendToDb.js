@@ -4,7 +4,7 @@ import {
     TransactWriteCommand
 } from "@aws-sdk/lib-dynamodb";
 
-import { json } from "../helpers/json";
+import { json } from "../helpers/json.js";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
