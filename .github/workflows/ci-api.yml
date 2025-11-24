@@ -9,11 +9,13 @@ on:
     paths:
       - 'backend/**'
       - 'serverless.api.yml'
+      - 'serverless.infra.yml'
       - '.github/workflows/**'
   pull_request:
     paths:
       - 'backend/**'
       - 'serverless.api.yml'
+      - 'serverless.infra.yml'
 
 jobs:
   test:
