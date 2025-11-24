@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-process.env.AUTH_TABLE = "AuthTableTest";
-
 // Mocks hoisted
 vi.mock("../dal/checkPasswordByUserId.js", () => {
     const checkPasswordByUserIdMock = vi.fn();
@@ -19,7 +17,7 @@ vi.mock("../dal/requestToDb.js", () => {
     };
 });
 
-// Imports after mocks
+// Imports après les mocks
 import { handler as removeAuthUserHandler } from "../lambda/removeAuthUserLambda.js";
 import { __mocks as checkPasswordMocks } from "../dal/checkPasswordByUserId.js";
 import { __mocks as requestToDbMocks } from "../dal/requestToDb.js";
@@ -52,26 +50,31 @@ describe("removeAuthUserLambda", () => {
         expect(body.ok).toBe(true);
 
         expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1);
+        expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
+            password: "Secret123!",
+            userId: "abc123"
+        });
 
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
         const [transactItems] = sendTransactToDbMock.mock.calls[0];
 
-        expect(transactItems).toEqual([
-            {
-                Delete: {
-                    TableName: "AuthTableTest",
-                    Key: { PK: "USER#abc123", SK: "AUTH" },
-                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-                }
-            },
-            {
-                Delete: {
-                    TableName: "AuthTableTest",
-                    Key: { PK: "EMAIL#test@example.com", SK: "UNIQUE" },
-                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-                }
-            }
-        ]);
+        expect(transactItems).toHaveLength(2);
+
+        // 1er delete : USER#id / AUTH
+        expect(transactItems[0].Delete.Key).toEqual({
+            PK: "USER#abc123",
+            SK: "AUTH"
+        });
+        expect(transactItems[0].Delete.ConditionExpression)
+            .toBe("attribute_exists(PK) AND attribute_exists(SK)");
+
+        // 2e delete : EMAIL#email / UNIQUE
+        expect(transactItems[1].Delete.Key).toEqual({
+            PK: "EMAIL#test@example.com",
+            SK: "UNIQUE"
+        });
+        expect(transactItems[1].Delete.ConditionExpression)
+            .toBe("attribute_exists(PK) AND attribute_exists(SK)");
     });
 
     it("returns 403 when password is incorrect", async () => {
@@ -89,6 +92,7 @@ describe("removeAuthUserLambda", () => {
 
         expect(res.statusCode).toBe(403);
         const body = JSON.parse(res.body);
+        expect(body.ok).toBe(false);
         expect(body.message).toBe("WRONG_PASSWORD");
 
         expect(sendTransactToDbMock).not.toHaveBeenCalled();
@@ -110,6 +114,7 @@ describe("removeAuthUserLambda", () => {
 
         expect(res.statusCode).toBe(500);
         const body = JSON.parse(res.body);
+        expect(body.ok).toBe(false);
         expect(body.message).toBe("INTERNAL_ERROR");
     });
 
@@ -122,9 +127,11 @@ describe("removeAuthUserLambda", () => {
 
         expect(res.statusCode).toBe(400);
         const body = JSON.parse(res.body);
+        expect(body.ok).toBe(false);
         expect(body.message).toBe("INVALID_JSON_BODY");
 
         expect(checkPasswordByUserIdMock).not.toHaveBeenCalled();
+        expect(sendTransactToDbMock).not.toHaveBeenCalled();
     });
 
     it("returns 400 when required fields are missing", async () => {
@@ -138,6 +145,7 @@ describe("removeAuthUserLambda", () => {
 
         expect(res.statusCode).toBe(400);
         const body = JSON.parse(res.body);
+        expect(body.ok).toBe(false);
         expect(body.message).toBe("MISSING_CRUCIAL_DATA");
 
         expect(checkPasswordByUserIdMock).not.toHaveBeenCalled();

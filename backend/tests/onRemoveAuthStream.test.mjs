@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-process.env.USER_TABLE = "UserTableTest";
-
 // Mocks hoisted
 vi.mock("../dal/requestToDb.js", () => {
     const sendTransactToDbMock = vi.fn();
@@ -26,7 +24,7 @@ beforeEach(() => {
 });
 
 describe("onRemoveAuthStreamLambda", () => {
-    it("processes REMOVE event and issues a TransactWrite with USER and EMAIL deletes", async () => {
+    it("processes REMOVE event and issues a write with USER and EMAIL deletes", async () => {
         sendTransactToDbMock.mockResolvedValueOnce({});
 
         const event = {
@@ -48,22 +46,23 @@ describe("onRemoveAuthStreamLambda", () => {
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
         const [transactItems] = sendTransactToDbMock.mock.calls[0];
 
-        expect(transactItems).toEqual([
-            {
-                Delete: {
-                    TableName: "UserTableTest",
-                    Key: { PK: "USER#user-123", SK: "PROFILE#user-123" },
-                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-                }
-            },
-            {
-                Delete: {
-                    TableName: "UserTableTest",
-                    Key: { PK: "EMAIL#test@example.com", SK: "UNIQUE" },
-                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-                }
-            }
-        ]);
+        expect(transactItems).toHaveLength(2);
+
+        // 1er delete : profil utilisateur
+        expect(transactItems[0].Delete.Key).toEqual({
+            PK: "USER#user-123",
+            SK: "PROFILE#user-123"
+        });
+        expect(transactItems[0].Delete.ConditionExpression)
+            .toBe("attribute_exists(PK) AND attribute_exists(SK)");
+
+        // 2e delete : lock email
+        expect(transactItems[1].Delete.Key).toEqual({
+            PK: "EMAIL#test@example.com",
+            SK: "UNIQUE"
+        });
+        expect(transactItems[1].Delete.ConditionExpression)
+            .toBe("attribute_exists(PK) AND attribute_exists(SK)");
     });
 
     it("skips ConditionalCheckFailedException and continues processing", async () => {
@@ -89,7 +88,7 @@ describe("onRemoveAuthStreamLambda", () => {
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
     });
 
-    it("logs error and does not throw on non-CCF errors (current implementation)", async () => {
+    it("logs error and does not throw on other errors (current implementation)", async () => {
         const err = new Error("Internal");
         err.name = "InternalServerError";
         sendTransactToDbMock.mockRejectedValueOnce(err);
@@ -117,7 +116,12 @@ describe("onRemoveAuthStreamLambda", () => {
             Records: [
                 {
                     eventName: "INSERT",
-                    dynamodb: { OldImage: { email: "x", userId: "y" } }
+                    dynamodb: {
+                        OldImage: {
+                            email: "x@example.com",
+                            userId: "user-x"
+                        }
+                    }
                 }
             ]
         };
