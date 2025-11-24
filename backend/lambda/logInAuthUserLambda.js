@@ -14,7 +14,7 @@ async function handlerCore(event) {
     try {
         let data;
         try {
-            data = JSON.parse(event.body || {});
+            data = JSON.parse(event.body);
         } catch (err) {
             return json(400, { ok: false, message: "INVALID_JSON_BODY" })
         }
@@ -25,19 +25,7 @@ async function handlerCore(event) {
             return json(400, { ok: false, message: "MISSING_CREDENTIALS" })
         }
 
-        try {
-            loginCore({ email, password })
-        } catch (err) {
-            if (err?.code === "RATE_LIMIT_EXCEEDED") {
-                return json(429, {
-                    ok: false,
-                    message: "TOO_MANY_REQUESTS",
-                    retryAfterSec: err.retryAfterSec,
-                });
-            }
-
-            return json(500, { ok: false, message: "INTERNAL_ERROR" });
-        }
+        return loginCore({ email, password })
 
     } catch (err) {
         console.error("Fatal error in login handler:", err);
