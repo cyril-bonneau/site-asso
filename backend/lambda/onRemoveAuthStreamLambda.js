@@ -1,5 +1,5 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
-import { sendTransactToDb } from "../dal/requestToDb";
+import { sendTransactToDb } from "../dal/requestToDb.js";
 
 const USER_TABLE = process.env.USER_TABLE;
 
