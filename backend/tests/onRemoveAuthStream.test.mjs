@@ -15,7 +15,7 @@ vi.mock("@aws-sdk/util-dynamodb", () => ({
 }));
 
 // Imports after mocks
-import { handler as onRemoveAuthStreamHandler } from "../onRemoveAuthStreamLambda.js";
+import { handler as onRemoveAuthStreamHandler } from "../lambda/onRemoveAuthStreamLambda.js";
 import { __mocks as requestToDbMocks } from "../dal/requestToDb.js";
 
 const { sendTransactToDbMock } = requestToDbMocks;

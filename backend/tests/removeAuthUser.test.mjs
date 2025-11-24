@@ -19,7 +19,7 @@ vi.mock("../dal/requestToDb.js", () => {
 });
 
 // Imports after mocks
-import { handler as removeAuthUserHandler } from "../removeAuthUserLambda.js";
+import { handler as removeAuthUserHandler } from "../lambda/removeAuthUserLambda.js";
 import { __mocks as checkPasswordMocks } from "../dal/checkPasswordByUserId.js";
 import { __mocks as requestToDbMocks } from "../dal/requestToDb.js";
 
