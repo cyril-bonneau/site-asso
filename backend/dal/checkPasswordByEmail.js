@@ -27,12 +27,12 @@ async function getAuthByEmail(email) {
         return { Item } = await ddb.send(
             new QueryCommand({
                 TableName: AUTH_TABLE,
-                IndexName: "GSI1",
+                IndexName: "GSI1v3",
                 KeyConditionExpression: "GSI1PK = :pk",
                 ExpressionAttributeValues: {
                     ":pk": `EMAIL#${email}`,
                 },
-                ProjectionExpression: "PK, userId, passwordHash",
+                ProjectionExpression: "passwordHash",
             })
         )
     } catch (err) {
