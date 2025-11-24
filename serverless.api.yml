@@ -301,7 +301,7 @@ functions:
   #       Resource:
   #         - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
-  onRemoveAuthUserStream: #Ajout de nouveau user dans la table générale des users
+  onRemoveAuthUserStream: #suppression de user dans la table générale des users
     handler: backend/lambda/onRemoveAuthStreamLambda.handler
     architecture: arm64           # ARM64 conseillé
     memorySize: 1024              # 1024–1536 Mo pour marge CPU
