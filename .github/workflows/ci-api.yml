@@ -87,4 +87,5 @@ jobs:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
         run: |
           echo "DEBUG - length SERVERLESS_ACCESS_KEY = ${#SERVERLESS_ACCESS_KEY}"
+          npx serverless deploy --config serverless.infra.yml --stage dev
           npx serverless deploy --config serverless.api.yml --stage dev

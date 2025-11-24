@@ -63,6 +63,7 @@ resources:
                 - PK
                 - SK
                 - userId
+                - passwordHash
                 - createdAt
         TimeToLiveSpecification:
           AttributeName: TTL
