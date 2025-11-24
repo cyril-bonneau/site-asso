@@ -1,124 +1,146 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+// backend/lambda/__tests__/removeAuthUser.test.mjs
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// --- Mocks hoistés ---
-
-// On mocke maintenant checkPasswordByUserId
-vi.mock('../dal/checkPasswordByUserId.js', () => {
-    const checkPasswordByUserIdMock = vi.fn()
+// Mocks hoisted
+vi.mock("../dal/checkPasswordByUserId.js", () => {
+    const checkPasswordByUserIdMock = vi.fn();
     return {
         checkPasswordByUserId: (...args) => checkPasswordByUserIdMock(...args),
-        __mocks: { checkPasswordByUserIdMock },
-    }
-})
+        __mocks: { checkPasswordByUserIdMock }
+    };
+});
 
-vi.mock('@aws-sdk/lib-dynamodb', () => {
-    const sendMock = vi.fn()
-
-    class TransactWriteCommand {
-        constructor(input) {
-            this.input = input
-        }
-    }
-
+vi.mock("../dal/requestToDb.js", () => {
+    const sendTransactToDbMock = vi.fn();
     return {
-        DynamoDBDocumentClient: {
-            from: vi.fn(() => ({ send: sendMock })),
-        },
-        TransactWriteCommand,
-        __mocks: { sendMock },
-    }
-})
+        sendTransactToDb: (...args) => sendTransactToDbMock(...args),
+        __mocks: { sendTransactToDbMock }
+    };
+});
 
-// --- Imports APRÈS les mocks ---
+// Imports after mocks
+import { handler as removeAuthUserHandler } from "../removeAuthUserLambda.js";
+import { __mocks as checkPasswordMocks } from "../dal/checkPasswordByUserId.js";
+import { __mocks as requestToDbMocks } from "../dal/requestToDb.js";
 
-import { handler as removeAuthUserHandler } from '../lambda/removeAuthUserLambda.js'
-import { __mocks as checkPasswordByUserIdMocks } from '../dal/checkPasswordByUserId.js'
-import { __mocks as ddbLibMocks } from '@aws-sdk/lib-dynamodb'
-
-const { checkPasswordByUserIdMock } = checkPasswordByUserIdMocks
-const { sendMock: ddbSendMock } = ddbLibMocks
+const { checkPasswordByUserIdMock } = checkPasswordMocks;
+const { sendTransactToDbMock } = requestToDbMocks;
 
 beforeEach(() => {
-    ddbSendMock.mockReset()
-    checkPasswordByUserIdMock.mockReset()
-    process.env.AUTH_TABLE = 'AuthTableTest'
-})
+    checkPasswordByUserIdMock.mockReset();
+    sendTransactToDbMock.mockReset();
+    process.env.AUTH_TABLE = "AuthTableTest";
+});
 
-describe('removeAuthUserLambda - succès / mauvais mot de passe / erreur DDB', () => {
-    it('✅ supprime un utilisateur si mot de passe correct', async () => {
-        // checkPasswordByUserId retourne true
-        checkPasswordByUserIdMock.mockResolvedValueOnce(true)
-
-        // TransactWriteCommand réussit
-        ddbSendMock.mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+describe("removeAuthUserLambda", () => {
+    it("removes the user when password is correct", async () => {
+        checkPasswordByUserIdMock.mockResolvedValueOnce(true);
+        sendTransactToDbMock.mockResolvedValueOnce({});
 
         const event = {
             body: JSON.stringify({
-                id: 'abc123',
-                email: 'test@example.com',
-                password: 'ValidPwd123!',
-            }),
-        }
+                id: "abc123",
+                email: "test@example.com",
+                password: "Secret123!"
+            })
+        };
 
-        const res = await removeAuthUserHandler(event)
+        const res = await removeAuthUserHandler(event);
 
-        expect(res.statusCode).toBe(201)
-        const body = JSON.parse(res.body)
-        expect(body.ok).toBe(true)
-        expect(body.message).toBe('User removed')
+        expect(res.statusCode).toBe(201);
+        const body = JSON.parse(res.body);
+        expect(body.ok).toBe(true);
 
-        // checkPasswordByUserId appelé une fois avec les bons params
-        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1)
-        expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
-            password: 'ValidPwd123!',
-            userId: 'abc123',
-        })
+        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1);
 
-        // Une seule requête DDB : le TransactWrite
-        expect(ddbSendMock).toHaveBeenCalledTimes(1)
-    })
+        expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
+        const [transactItems] = sendTransactToDbMock.mock.calls[0];
 
-    it('⚠️ échec logique : mauvais mot de passe → WRONG_PASSWORD', async () => {
-        // checkPasswordByUserId = false
-        checkPasswordByUserIdMock.mockResolvedValueOnce(false)
+        expect(transactItems).toEqual([
+            {
+                Delete: {
+                    TableName: "AuthTableTest",
+                    Key: { PK: "USER#abc123", SK: "AUTH" },
+                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
+                }
+            },
+            {
+                Delete: {
+                    TableName: "AuthTableTest",
+                    Key: { PK: "EMAIL#test@example.com", SK: "UNIQUE" },
+                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
+                }
+            }
+        ]);
+    });
 
-        const event = {
-            body: JSON.stringify({
-                id: 'abc123',
-                email: 'test@example.com',
-                password: 'BadPwd',
-            }),
-        }
-
-        // Le handler ne catch pas, donc on attend un rejet
-        await expect(removeAuthUserHandler(event)).rejects.toMatchObject({
-            code: 'WRONG_PASSWORD',
-            message: 'Wrong password',
-        })
-
-        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1)
-        // DDB ne doit jamais être appelé dans ce cas
-        expect(ddbSendMock).not.toHaveBeenCalled()
-    })
-
-    it('💥 échec critique : TransactWrite DDB plante → throw', async () => {
-        // Mot de passe OK
-        checkPasswordByUserIdMock.mockResolvedValueOnce(true)
-
-        // Mais DDB plante au moment de la transaction
-        ddbSendMock.mockRejectedValueOnce(new Error('Dynamo down'))
+    it("returns 403 when password is incorrect", async () => {
+        checkPasswordByUserIdMock.mockResolvedValueOnce(false);
 
         const event = {
             body: JSON.stringify({
-                id: 'abc123',
-                email: 'test@example.com',
-                password: 'Whatever',
-            }),
-        }
+                id: "abc123",
+                email: "test@example.com",
+                password: "bad"
+            })
+        };
 
-        await expect(removeAuthUserHandler(event)).rejects.toThrow('Dynamo down')
+        const res = await removeAuthUserHandler(event);
 
-        expect(checkPasswordByUserIdMock).toHaveBeenCalledTimes(1)
-        expect(ddbSendMock).toHaveBeenCalledTimes(1)
-    })
-})
+        expect(res.statusCode).toBe(403);
+        const body = JSON.parse(res.body);
+        expect(body.message).toBe("WRONG_PASSWORD");
+
+        expect(sendTransactToDbMock).not.toHaveBeenCalled();
+    });
+
+    it("returns 500 when DynamoDB TransactWrite fails", async () => {
+        checkPasswordByUserIdMock.mockResolvedValueOnce(true);
+        sendTransactToDbMock.mockRejectedValueOnce(new Error("DDB down"));
+
+        const event = {
+            body: JSON.stringify({
+                id: "abc123",
+                email: "test@example.com",
+                password: "ok"
+            })
+        };
+
+        const res = await removeAuthUserHandler(event);
+
+        expect(res.statusCode).toBe(500);
+        const body = JSON.parse(res.body);
+        expect(body.message).toBe("INTERNAL_ERROR");
+    });
+
+    it("returns 400 on invalid JSON", async () => {
+        const event = {
+            body: "{ invalid json"
+        };
+
+        const res = await removeAuthUserHandler(event);
+
+        expect(res.statusCode).toBe(400);
+        const body = JSON.parse(res.body);
+        expect(body.message).toBe("INVALID_JSON_BODY");
+
+        expect(checkPasswordByUserIdMock).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when required fields are missing", async () => {
+        const event = {
+            body: JSON.stringify({
+                email: "test@example.com"
+            })
+        };
+
+        const res = await removeAuthUserHandler(event);
+
+        expect(res.statusCode).toBe(400);
+        const body = JSON.parse(res.body);
+        expect(body.message).toBe("MISSING_CRUCIAL_DATA");
+
+        expect(checkPasswordByUserIdMock).not.toHaveBeenCalled();
+        expect(sendTransactToDbMock).not.toHaveBeenCalled();
+    });
+});

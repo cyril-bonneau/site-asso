@@ -1,16 +1,8 @@
-import {
-    DynamoDBClient
-} from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
-
 import { checkPasswordByUserId } from "../dal/checkPasswordByUserId.js";
 import { json } from "../helpers/json.js";
+import { sendTransactToDb } from "../dal/requestToDb.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
 
 export const handler = async (event) => {
     let data
@@ -25,17 +17,20 @@ export const handler = async (event) => {
         return json(400, { ok: false, message: "MISSING_CRUCIAL_DATA" })
     }
 
-    if (!email) {
-        return json(400, { ok: false, error: "EMAIL_REQUIRED" });
+    try {
+        const result = await removeAuthUser(id, email, password);
+        return json(201, { ok: true, message: "User removed", ...result });
+    } catch (err) {
+        if (err.code === "WRONG_PASSWORD") {
+            return json(403, { ok: false, message: "WRONG_PASSWORD" });
+        }
+        console.error("removeAuthUser error", err);
+        return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
-
-    const result = await removeAuthUser(id, email, password)
-    return json(201, { ok: true, message: "User removed", ...result });
 }
 
 async function removeAuthUser(userId, email, password) {
 
-    console.log('test')
     const pkAuth = `USER#${userId}`
     const skAuth = "AUTH"
     const pkEmail = `EMAIL#${email}`
@@ -46,32 +41,25 @@ async function removeAuthUser(userId, email, password) {
     if (!test) {
         const err = new Error("Wrong password");
         err.code = "WRONG_PASSWORD";
-        throw err;
-    }
-
-    const cmd = new TransactWriteCommand({
-        TransactItems: [
-            {
-                Delete: {
-                    TableName: AUTH_TABLE,
-                    Key: { PK: pkAuth, SK: skAuth },
-                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-                },
-            },
-            {
-                Delete: {
-                    TableName: AUTH_TABLE,
-                    Key: { PK: pkEmail, SK: skEmail },
-                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-                }
-            }
-        ],
-        ReturnConsumedCapacity: "TOTAL",
-    })
-
-    try {
-        return await ddb.send(cmd)
-    } catch (err) {
         throw err
     }
+
+    const removeRequest = [
+        {
+            Delete: {
+                TableName: AUTH_TABLE,
+                Key: { PK: pkAuth, SK: skAuth },
+                ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
+            }
+        },
+        {
+            Delete: {
+                TableName: AUTH_TABLE,
+                Key: { PK: pkEmail, SK: skEmail },
+                ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
+            }
+        }
+    ]
+
+    return await sendTransactToDb(removeRequest)
 }

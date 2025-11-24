@@ -2,7 +2,8 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
     DynamoDBDocumentClient,
     TransactWriteCommand,
-    UpdateCommand
+    UpdateCommand,
+    DeleteCommand
 } from "@aws-sdk/lib-dynamodb";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -27,6 +28,16 @@ export async function sendUpdateToDb(updatePasswordResult) {
     try {
         await ddb.send(new UpdateCommand(updatePasswordResult))
     } catch (err) {
+        console.error("update failed", err)
+        throw err
+    }
+}
+
+export async function removeFromDb(removeRequest) {
+    try {
+        await ddb.send(new DeleteCommand(removeRequest))
+    } catch (err) {
+        console.log("error while removing data", err)
         throw err
     }
 }

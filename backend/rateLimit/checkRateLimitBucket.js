@@ -1,8 +1,3 @@
-// backend/rateLimit/checkRateLimitBucket.js
-// Version découpée qui gère:
-// - le mode token-bucket (refill continu) via rateLimitCore + rateLimitStorageDdb
-// - le mode fenêtre fixe via windowSeconds (logique dédiée avec CAS)
-
 import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { computeBucketState } from "./rateLimitCore.js";
 import {
@@ -15,11 +10,7 @@ import {
 function makeLogger(scope) {
     const prefix = `[rate-limit:${scope}]`;
     return {
-        debug: (...args) => {
-            if (process.env.ENABLE_RL_LOGS === "true") {
-                console.log(prefix, ...args);
-            }
-        },
+        debug: (...args) => console.log(prefix, ...args),
         warn: (...args) => console.warn(prefix, ...args),
     };
 }

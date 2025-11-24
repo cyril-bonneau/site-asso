@@ -35,7 +35,6 @@ async function getAuthByEmail(email) {
                 ProjectionExpression: "PK, userId, passwordHash",
             })
         )
-
     } catch (err) {
         return err
     }

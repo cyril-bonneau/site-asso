@@ -1,18 +1,20 @@
 import { json } from "../helpers/json.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
-import { sendTransactToDb } from "../dal/sendToDb.js"
+import { sendTransactToDb } from "../dal/requestToDb.js"
 
 export const handler = async (event) => {
     try {
         const userId = event?.queryStringParameters?.id;
+
         if (!userId) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
         let data;
+
         try {
-            data = JSON.parse(event.body || "{}");
+            data = JSON.parse(event.body);
         } catch {
             return json(400, { ok: false, message: "INVALID_JSON_BODY" });
         }

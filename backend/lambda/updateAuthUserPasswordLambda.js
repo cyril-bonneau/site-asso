@@ -1,7 +1,7 @@
 import { updatePasswordCore } from "../dal/updatePasswordCore.js"
 import { json } from "../helpers/json.js";
 
-import { sendUpdateToDb } from "../dal/sendToDb.js";
+import { sendUpdateToDb } from "../dal/requestToDb.js";
 
 export const handler = async (event) => {
     try {

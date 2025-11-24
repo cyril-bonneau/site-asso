@@ -1,8 +1,7 @@
-import { DynamoDBClient, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
-import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { sendTransactToDb } from "../dal/requestToDb";
 
 const USER_TABLE = process.env.USER_TABLE;
-const ddb = new DynamoDBClient({})
 
 const RETRYABLE = new Set([
     "ProvisionedThroughputExceededException",
@@ -60,44 +59,30 @@ async function removeUserWithUniqueEmail({ userId, email }) {
 
     console.log("userId and skuser = ", userId, skUser)
 
-    try {
-        console.log("je passe ici")
-        await ddb.send(
-            new DeleteItemCommand({
+    const removeRequest = [
+        {
+            Delete: {
                 TableName: USER_TABLE,
-                Key: marshall({
-                    PK: pkEmail,
-                    SK: skEmail
-                }),
+                Key: { PK: pkUser, SK: skUser },
                 ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-            })
-        )
+            }
+        },
+        {
+            Delete: {
+                TableName: USER_TABLE,
+                Key: { PK: pkEmail, SK: skEmail },
+                ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
+            }
+        }
+    ]
+
+    try {
+        await sendTransactToDb(removeRequest)
     } catch (err) {
         console.log("wtf", err)
         if (err?.name === "ConditionalCheckFailedException") {
             console.warn("onAuthStream: inexistant, continue");
         }
     }
-
-    try {
-        console.log("je rentre ici aussi")
-        await ddb.send(
-            new DeleteItemCommand({
-                TableName: USER_TABLE,
-                Key: marshall({
-                    PK: pkUser,
-                    SK: skUser
-                }),
-                ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)"
-            }))
-    } catch (err) {
-        console.log("mais putain !", err)
-        if (err?.name === "ConditionalCheckFailedException") {
-            console.warn("onAuthStream: déjà présent (idempotent), on continue");
-            return;
-        }
-        throw err; // retryables ou inconnues
-    }
-
     console.info("onRemoveAuthStream: projection OK");
 }

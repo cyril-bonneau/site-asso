@@ -17,7 +17,6 @@ export async function checkPasswordByUserId({ password, userId }) {
     const auth = await getAuthByUserId(userId)
 
     if (!auth || !auth.passwordHash) {
-        console.log(auth)
         throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH", auth);
     }
 
