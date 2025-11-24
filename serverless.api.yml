@@ -132,7 +132,7 @@ functions:
           path: /registerUser
 
   loginUser:
-    handler: backend/lambda/logInAuthUserLambda.js
+    handler: backend/lambda/logInAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
     environment:
