@@ -3,7 +3,14 @@ import { json } from "../helpers/json.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 
-export const handler = async (event) => {
+export const handler = withRateLimit(handlerCore, {
+    scope: "login",
+    capacity: 3,
+    refillRate: 0.005,
+    windowSeconds: true
+})
+
+async function handlerCore(event) {
     try {
         let data;
         try {
@@ -18,13 +25,8 @@ export const handler = async (event) => {
             return json(400, { ok: false, message: "MISSING_CREDENTIALS" })
         }
 
-        const normalizedEmail = normalizeEmail(email);
-
         try {
-            return loginWithRateLimit({
-                email: normalizedEmail,
-                password
-            });
+            loginCore({ email, password })
         } catch (err) {
             if (err?.code === "RATE_LIMIT_EXCEEDED") {
                 return json(429, {
@@ -34,7 +36,6 @@ export const handler = async (event) => {
                 });
             }
 
-            console.error("Error in login handler:", err);
             return json(500, { ok: false, message: "INTERNAL_ERROR" });
         }
 
@@ -44,15 +45,7 @@ export const handler = async (event) => {
     }
 }
 
-const loginWithRateLimit = withRateLimit(loginCore, {
-    scope: "login",
-    capacity: 3,
-    refillRate: 0.005,
-    windowSeconds: true
-})
-
-async function loginCore(event) {
-    const { email, password } = JSON.parse(event.body);
+async function loginCore({ email, password }) {
 
     const check = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
 
