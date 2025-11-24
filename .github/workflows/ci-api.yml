@@ -79,7 +79,7 @@ jobs:
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
         run: |
-          npx serverless print --config serverless.api.yml --stage dev | sed -n '1,200p'
+          npx serverless print --config serverless.infra.yml --stage dev | sed -n '1,200p'
 
       - name: Deploy API (dev)
         working-directory: .
