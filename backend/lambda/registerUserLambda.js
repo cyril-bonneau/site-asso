@@ -22,13 +22,7 @@ export const handler = withRateLimit(registerUserCore, {
     scope: "REGISTER",     // nom logique de l’action
     capacity: 3,
     refillRate: 0.1,       // 1 token / 10 s
-    cost: 1,
-    keyFromEvent: (event) => {
-        // avant auth: mieux vaut l’IP
-        const ip = event?.requestContext?.http?.sourceIp
-            || event?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim();
-        return ip || "unknown";
-    }
+    cost: 1
 })
 
 async function registerUserCore(event) {

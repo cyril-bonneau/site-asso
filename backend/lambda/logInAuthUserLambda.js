@@ -1,7 +1,7 @@
-import { checkPasswordByEmail } from "../dal/checkPasswordByEmail";
+import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
 import { json } from "../helpers/json.js";
-import { normalizeEmail } from "../helpers/toolbox";
-import { withRateLimit } from "../rateLimit/withRateLimit";
+import { normalizeEmail } from "../helpers/toolbox.js";
+import { withRateLimit } from "../rateLimit/withRateLimit.js";
 
 export const handler = async (event) => {
     try {
@@ -47,7 +47,6 @@ export const handler = async (event) => {
 const loginWithRateLimit = withRateLimit(loginCore, {
     scope: "login",
     capacity: 3,
-    keySelector: (({ email }) => `EMAIL#${email}`),
     refillRate: 0.005,
     windowSeconds: true
 })
