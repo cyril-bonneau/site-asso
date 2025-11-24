@@ -1,5 +1,6 @@
-// backend/lambda/__tests__/removeAuthUser.test.mjs
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+process.env.AUTH_TABLE = "AuthTableTest";
 
 // Mocks hoisted
 vi.mock("../dal/checkPasswordByUserId.js", () => {
@@ -29,7 +30,6 @@ const { sendTransactToDbMock } = requestToDbMocks;
 beforeEach(() => {
     checkPasswordByUserIdMock.mockReset();
     sendTransactToDbMock.mockReset();
-    process.env.AUTH_TABLE = "AuthTableTest";
 });
 
 describe("removeAuthUserLambda", () => {

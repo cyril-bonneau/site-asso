@@ -1,5 +1,6 @@
-// backend/lambda/__tests__/onRemoveAuthStream.test.mjs
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+process.env.USER_TABLE = "UserTableTest";
 
 // Mocks hoisted
 vi.mock("../dal/requestToDb.js", () => {
@@ -22,7 +23,6 @@ const { sendTransactToDbMock } = requestToDbMocks;
 
 beforeEach(() => {
     sendTransactToDbMock.mockReset();
-    process.env.USER_TABLE = "UserTableTest";
 });
 
 describe("onRemoveAuthStreamLambda", () => {
