@@ -326,6 +326,7 @@ functions:
         Action:
           - dynamodb:TransactWriteItems
           - dynamodb:ConditionCheckItem
+          - dynamodb:DeleteItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
 
