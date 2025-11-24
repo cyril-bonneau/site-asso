@@ -49,7 +49,7 @@ async function loginCore({ email, password }) {
 
     const check = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
 
-    if (check) {
+    if (!check) {
         return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
     }
 
