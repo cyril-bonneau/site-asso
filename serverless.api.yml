@@ -121,6 +121,7 @@ functions:
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+
       - Effect: Allow
         Action:
           - dynamodb:GetItem
@@ -137,6 +138,7 @@ functions:
     architecture: arm64
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+      RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
