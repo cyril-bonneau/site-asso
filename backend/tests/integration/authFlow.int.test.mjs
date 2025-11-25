@@ -6,8 +6,8 @@ import { callApi, getUserProfileByUserId } from "./config.int.mjs";
 // email unique à chaque run pour éviter les collisions en dev
 const timestamp = Date.now();
 const TEST_EMAIL = `int-user-${timestamp}@example.com`;
-const TEST_PASSWORD = "P@ssw0rd!42";
-const TEST_NEW_PASSWORD = "N3wP@ssw0rd!42";
+const TEST_PASSWORD = "Ax9!qL7#vZ3@pT2";
+const TEST_NEW_PASSWORD = "Hy4&nK8@wS6?dR1";
 const TEST_FIRSTNAME = "Jack";
 const TEST_LASTNAME = "Larnaque";
 const TEST_NEW_FIRSTNAME = "Jacky";  // pour le update
