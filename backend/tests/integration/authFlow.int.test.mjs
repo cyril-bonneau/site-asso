@@ -19,7 +19,7 @@ describe("Parcours complet Auth (intégration)", () => {
     // 1) Création de l’utilisateur
     beforeAll(async () => {
         // 1) register
-        const { status, body } = await callApi("POST", "/auth/register", {
+        const { status, body } = await callApi("POST", "/registerUser", {
             email: TEST_EMAIL,
             password: TEST_PASSWORD,
             firstname: TEST_FIRSTNAME,
