@@ -1,13 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// --- MOCKS ---
-// Le DAL doit renvoyer { ok: true } ou { ok: false }
-// pas un throw : c’est la lambda qui throw si ok === false
-
 vi.mock("../../dal/checkPasswordByUserId.js", () => {
     const checkPasswordByUserIdMock = vi.fn();
     return {
-        checkPasswordByUserId: (...args) => checkPasswordByUserIdMock(...args),
+        checkPasswordByUserId: (...a) => checkPasswordByUserIdMock(...a),
         __mocks: { checkPasswordByUserIdMock },
     };
 });
@@ -15,18 +11,18 @@ vi.mock("../../dal/checkPasswordByUserId.js", () => {
 vi.mock("../../dal/requestToDb.js", () => {
     const sendTransactToDbMock = vi.fn();
     return {
-        sendTransactToDb: (...args) => sendTransactToDbMock(...args),
+        sendTransactToDb: (...a) => sendTransactToDbMock(...a),
         __mocks: { sendTransactToDbMock },
     };
 });
 
-// --- Imports réels ---
-import { handler as removeAuthUserHandler } from "../../lambda/removeAuthUserLambda.js";
-import { __mocks as checkPasswordMocks } from "../../dal/checkPasswordByUserId.js";
-import { __mocks as requestToDbMocks } from "../../dal/requestToDb.js";
+import { __mocks as checkMocks } from "../../dal/checkPasswordByUserId.js";
+import { __mocks as trxMocks } from "../../dal/requestToDb.js";
 
-const { checkPasswordByUserIdMock } = checkPasswordMocks;
-const { sendTransactToDbMock } = requestToDbMocks;
+import { handler as removeAuthUserHandler } from "../../lambda/removeAuthUserLambda.js";
+
+const { checkPasswordByUserIdMock } = checkMocks;
+const { sendTransactToDbMock } = trxMocks;
 
 describe("removeAuthUserLambda", () => {
     beforeEach(() => {
@@ -34,16 +30,10 @@ describe("removeAuthUserLambda", () => {
         process.env.AUTH_TABLE = "AuthTableTest";
     });
 
-    it("returns 400 when crucial data is missing", async () => {
-        const event = {
-            body: JSON.stringify({
-                email: "test@example.com",
-                password: "password123",
-                // missing id
-            }),
-        };
-
-        const response = await removeAuthUserHandler(event);
+    it("returns 400 when missing fields", async () => {
+        const response = await removeAuthUserHandler({
+            body: JSON.stringify({ email: "a@a.com" }),
+        });
 
         expect(response.statusCode).toBe(400);
         expect(JSON.parse(response.body)).toEqual({
@@ -52,84 +42,56 @@ describe("removeAuthUserLambda", () => {
         });
     });
 
-    it("returns 403 if password is incorrect", async () => {
-        // Le DAL renvoie ok:false → la lambda doit throw
-        checkPasswordByUserIdMock.mockResolvedValueOnce({
-            ok: false,
-            message: "WRONG_PASSWORD",
-        });
+    it("returns 403 on wrong password", async () => {
+        checkPasswordByUserIdMock.mockResolvedValueOnce(false);
 
-        const event = {
+        const response = await removeAuthUserHandler({
             body: JSON.stringify({
                 email: "test@example.com",
-                password: "wrongpassword",
+                password: "wrong",
                 id: "user-123",
             }),
-        };
-
-        const response = await removeAuthUserHandler(event);
+        });
 
         expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
             userId: "user-123",
-            password: "wrongpassword",
+            password: "wrong",
         });
+
+        expect(sendTransactToDbMock).not.toHaveBeenCalled();
 
         expect(response.statusCode).toBe(403);
         expect(JSON.parse(response.body)).toEqual({
             ok: false,
             message: "WRONG_PASSWORD",
         });
-
-        // Pas de transaction si mauvais mot de passe
-        expect(sendTransactToDbMock).not.toHaveBeenCalled();
     });
 
-    it("returns 201 when user is successfully removed", async () => {
-        checkPasswordByUserIdMock.mockResolvedValueOnce({
-            ok: true,
-            code: "PASSWORD_CORRECT",
-        });
+    it("returns 201 on successful delete", async () => {
+        checkPasswordByUserIdMock.mockResolvedValueOnce(true);
+        sendTransactToDbMock.mockResolvedValueOnce({ ok: true });
 
-        sendTransactToDbMock.mockResolvedValueOnce({
-            ok: true,
-            data: { success: true },
-        });
-
-        const event = {
+        const response = await removeAuthUserHandler({
             body: JSON.stringify({
                 email: "test@example.com",
-                password: "correctpassword",
+                password: "correct",
                 id: "user-123",
             }),
-        };
-
-        const response = await removeAuthUserHandler(event);
-
-        expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
-            userId: "user-123",
-            password: "correctpassword",
         });
 
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
+        const trx = sendTransactToDbMock.mock.calls[0][0];
 
-        const transactPayload = sendTransactToDbMock.mock.calls[0][0];
-
-        expect(transactPayload).toEqual(
+        expect(trx).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     Delete: expect.objectContaining({
-                        Key: {
-                            PK: "USER#user-123",
-                            SK: "AUTH",
-                        },
+                        Key: { PK: "USER#user-123", SK: "AUTH" },
                     }),
                 }),
                 expect.objectContaining({
                     Delete: expect.objectContaining({
-                        Key: {
-                            PK: "EMAIL#test@example.com",
-                            SK: "UNIQUE",
-                        },
+                        Key: { PK: "EMAIL#test@example.com", SK: "UNIQUE" },
                     }),
                 }),
             ])
@@ -142,12 +104,8 @@ describe("removeAuthUserLambda", () => {
         });
     });
 
-    it("returns 400 when event body is not valid JSON", async () => {
-        const event = {
-            body: "{invalidJson: true",
-        };
-
-        const response = await removeAuthUserHandler(event);
+    it("returns 400 on invalid JSON", async () => {
+        const response = await removeAuthUserHandler({ body: "{nope" });
 
         expect(response.statusCode).toBe(400);
         expect(JSON.parse(response.body)).toEqual({
