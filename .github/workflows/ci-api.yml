@@ -98,7 +98,7 @@ jobs:
           npx serverless deploy --config serverless.api.yml --stage dev
 
       - name: Run integration tests
-        working-directory: .
+        working-directory: ./backend
         env:
           AUTH_TABLE: site-asso-dev-asso-auth-v2
           USER_TABLE: site-asso-dev-asso-main
