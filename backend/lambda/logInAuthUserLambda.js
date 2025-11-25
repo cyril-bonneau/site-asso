@@ -52,6 +52,9 @@ async function loginCore({ email, password }) {
         });
 
     } catch (err) {
+        if (err?.message === "AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH") {
+            return json(404, { ok: false, message: "AUTH_NOT_FOUND" });
+        }
         console.warn("loginCore: checkPasswordByEmail error", err);
         return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
