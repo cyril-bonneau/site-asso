@@ -7,7 +7,7 @@
   "scripts": {
     "start": "nodemon index.js",
     "start:lambda-check": "cross-env RUNTIME=lambda node lambda-check.js",
-    "test:unit": "vitest run tests/unit",
+    "test:unit": "vitest run tests",
     "test:integration": "vitest run tests/integration --runInBand",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
