@@ -40,7 +40,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: ./backend
-        run: npm test
+        run: npm test:unit
 
   deploy-dev:
     name: Deploy API (dev)
