@@ -12,7 +12,7 @@ describe("logInAuthUserLambda (intégration)", () => {
 
         expect(statusCode).toBe(400);
         expect(body?.ok).toBe(false);
-        expect(body?.message).toBe("INVALID_JSON_BODY");
+        expect(body?.message).toBe("Request body must be valid JSON");
     });
 
     it("400 MISSING_CREDENTIALS si email ou password manquent", async () => {
@@ -40,6 +40,25 @@ describe("logInAuthUserLambda (intégration)", () => {
         expect(body?.message).toBe("WRONG_CREDENTIALS");
     });
 
+    it("500 INTERNAL_ERROR quand l'email n'existe pas", async () => {
+        // on n'enregistre volontairement aucun utilisateur
+        const event = {
+            body: JSON.stringify({
+                email: "no-user-here@example.com",
+                password: "whatever123!!",
+            }),
+        };
+
+        const { statusCode, body } = await invokeLambda(
+            "logInAuthUserLambda",
+            event
+        );
+
+        expect(statusCode).toBe(500);
+        expect(body?.ok).toBe(false);
+        expect(body?.message).toBe("INTERNAL_ERROR");
+    });
+
     it("200 LOGGED_IN avec des identifiants valides", async () => {
         const { email, password } = await createTestUser({
             suffix: "login-ok",
@@ -55,4 +74,5 @@ describe("logInAuthUserLambda (intégration)", () => {
         expect(body?.ok).toBe(true);
         expect(body?.message).toBe("LOGGED_IN");
     });
+
 });

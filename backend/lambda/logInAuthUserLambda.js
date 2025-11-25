@@ -35,17 +35,26 @@ async function handlerCore(event) {
 
 async function loginCore({ email, password }) {
 
-    const check = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
+    try {
 
-    if (!check) {
-        return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
+        const check = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
+
+        if (!check) {
+            return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
+        }
+
+        return json(200, {
+            ok: true,
+            message: "LOGGED_IN"
+            // accessToken,
+            // refreshToken,
+            // userId,
+        });
+
+    } catch (err) {
+        console.warn("loginCore: checkPasswordByEmail error", err);
+        return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
 
-    return json(200, {
-        ok: true,
-        message: "LOGGED_IN"
-        // accessToken,
-        // refreshToken,
-        // userId,
-    });
+
 }

@@ -18,7 +18,7 @@ describe("registerUserLambda (intégration)", () => {
 
         expect(statusCode).toBe(400);
         expect(body?.ok).toBe(false);
-        expect(body?.message).toBe("INVALID_JSON_BODY");
+        expect(body?.message).toBe("Request body must be valid JSON");
     });
 
     it("400 MISSING_CREDENTIALS si email ou password manquent", async () => {
