@@ -24,11 +24,16 @@ vi.mock("@aws-sdk/client-dynamodb", () => {
 });
 
 vi.mock("@aws-sdk/util-dynamodb", () => ({
+    marshall: (obj) => obj, // on peut se contenter de renvoyer l'objet tel quel
     unmarshall: (obj) => {
+        // mini-unmarshall : { field: { S: "x" } } -> { field: "x" }
         const out = {};
-        for (const [k, v] of Object.entries(obj)) {
-            if (v && typeof v === "object" && "S" in v) out[k] = v.S;
-            else out[k] = v;
+        for (const [k, v] of Object.entries(obj || {})) {
+            if (v && typeof v === "object" && "S" in v) {
+                out[k] = v.S;
+            } else {
+                out[k] = v;
+            }
         }
         return out;
     },

@@ -67,7 +67,7 @@ describe("removeAuthUserLambda", () => {
         });
     });
 
-    it("returns 201 on successful delete", async () => {
+    it("returns 200 on successful delete", async () => {
         checkPasswordByUserIdMock.mockResolvedValueOnce(true);
         sendTransactToDbMock.mockResolvedValueOnce({ ok: true });
 
@@ -97,7 +97,7 @@ describe("removeAuthUserLambda", () => {
             ])
         );
 
-        expect(response.statusCode).toBe(201);
+        expect(response.statusCode).toBe(200);
         expect(JSON.parse(response.body)).toEqual({
             ok: true,
             message: "User removed",
