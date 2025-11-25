@@ -43,6 +43,7 @@ async function loginCore({ email, password }) {
 
     return json(200, {
         ok: true,
+        message: "LOGGED_IN"
         // accessToken,
         // refreshToken,
         // userId,

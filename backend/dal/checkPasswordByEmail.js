@@ -24,7 +24,7 @@ export async function checkPasswordByEmail({ password, email }) {
 
 async function getAuthByEmail(email) {
     try {
-        return { Item } = await ddb.send(
+        const res = await ddb.send(
             new QueryCommand({
                 TableName: AUTH_TABLE,
                 IndexName: "GSI1v3",
@@ -35,6 +35,7 @@ async function getAuthByEmail(email) {
                 ProjectionExpression: "passwordHash",
             })
         )
+        return res.Items[0]
     } catch (err) {
         return err
     }
