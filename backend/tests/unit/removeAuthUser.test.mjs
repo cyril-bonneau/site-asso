@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Mocks hoistés
+// --- MOCKS ---
+// Le DAL doit renvoyer { ok: true } ou { ok: false }
+// pas un throw : c’est la lambda qui throw si ok === false
+
 vi.mock("../../dal/checkPasswordByUserId.js", () => {
     const checkPasswordByUserIdMock = vi.fn();
     return {
@@ -17,7 +20,7 @@ vi.mock("../../dal/requestToDb.js", () => {
     };
 });
 
-// Imports réels
+// --- Imports réels ---
 import { handler as removeAuthUserHandler } from "../../lambda/removeAuthUserLambda.js";
 import { __mocks as checkPasswordMocks } from "../../dal/checkPasswordByUserId.js";
 import { __mocks as requestToDbMocks } from "../../dal/requestToDb.js";
@@ -36,10 +39,12 @@ describe("removeAuthUserLambda", () => {
             body: JSON.stringify({
                 email: "test@example.com",
                 password: "password123",
+                // missing id
             }),
         };
 
         const response = await removeAuthUserHandler(event);
+
         expect(response.statusCode).toBe(400);
         expect(JSON.parse(response.body)).toEqual({
             ok: false,
@@ -48,6 +53,7 @@ describe("removeAuthUserLambda", () => {
     });
 
     it("returns 403 if password is incorrect", async () => {
+        // Le DAL renvoie ok:false → la lambda doit throw
         checkPasswordByUserIdMock.mockResolvedValueOnce({
             ok: false,
             message: "WRONG_PASSWORD",
@@ -74,13 +80,13 @@ describe("removeAuthUserLambda", () => {
             message: "WRONG_PASSWORD",
         });
 
+        // Pas de transaction si mauvais mot de passe
         expect(sendTransactToDbMock).not.toHaveBeenCalled();
     });
 
     it("returns 201 when user is successfully removed", async () => {
         checkPasswordByUserIdMock.mockResolvedValueOnce({
             ok: true,
-            statusCode: 200,
             code: "PASSWORD_CORRECT",
         });
 
@@ -105,6 +111,7 @@ describe("removeAuthUserLambda", () => {
         });
 
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
+
         const transactPayload = sendTransactToDbMock.mock.calls[0][0];
 
         expect(transactPayload).toEqual(

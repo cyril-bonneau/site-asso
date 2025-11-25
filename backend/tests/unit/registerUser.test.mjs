@@ -100,7 +100,10 @@ describe("registerUserLambda - succès / échec / échec critique", () => {
         const response = await registerUserHandler(event);
 
         expect(validatePasswordBackendMock).toHaveBeenCalledTimes(1);
-        expect(validatePasswordBackendMock).toHaveBeenCalledWith("StrongPwd123!");
+        expect(validatePasswordBackendMock).toHaveBeenCalledWith(
+            "StrongPwd123!",
+            { email: "test@example.com", useHIBP: true }
+        );
 
         expect(nanoidMock).toHaveBeenCalledTimes(1);
 

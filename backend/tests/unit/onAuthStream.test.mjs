@@ -79,27 +79,33 @@ describe("onAuthStreamLambda", () => {
         expect(sendMock).toHaveBeenCalledTimes(2);
 
         const firstCall = sendMock.mock.calls[0][0];
-        const secondCall = sendMock.mock.calls[1][0];
-
         expect(firstCall.input).toEqual({
-            TableName: "UserTableTest",
-            Item: {
-                PK: "USER#user-123",
-                SK: "PROFILE#user-123",
-                userId: "user-123",
-                email: "test@example.com",
-                firstName: "John",
-                lastName: "Doe",
-            },
-        });
-
-        expect(secondCall.input).toEqual({
             TableName: "UserTableTest",
             Item: {
                 PK: "EMAIL#test@example.com",
                 SK: "UNIQUE",
                 userId: "user-123",
+                createdAt: expect.any(String),
             },
+            ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
+        });
+
+        const secondCall = sendMock.mock.calls[1][0];
+        expect(secondCall.input).toEqual({
+            TableName: "UserTableTest",
+            Item: {
+                PK: "USER#user-123",
+                SK: "PROFILE#user-123",
+                GSI1PK: "USER#EMAIL",
+                GSI1SK: "test@example.com",
+                userId: "user-123",
+                email: "test@example.com",
+                firstName: "John",
+                lastName: "Doe",
+                createdAt: expect.any(String),
+                updatedAt: expect.any(String)
+            },
+            ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)",
         });
     });
 
@@ -140,6 +146,6 @@ describe("onAuthStreamLambda", () => {
         sendMock.mockRejectedValueOnce(new Error("DynamoDB error"));
         sendMock.mockRejectedValueOnce(new Error("DynamoDB error"));
 
-        await expect(onAuthStreamHandler(event)).rejects.toThrow("Internal error");
+        await expect(onAuthStreamHandler(event)).rejects.toThrow("DynamoDB error")
     });
 });
