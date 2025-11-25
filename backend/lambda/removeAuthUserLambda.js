@@ -18,8 +18,8 @@ export const handler = async (event) => {
     }
 
     try {
-        const result = await removeAuthUser(id, email, password);
-        return json(201, { ok: true, message: "User removed", ...result });
+        await removeAuthUser(id, email, password);
+        return json(201, { ok: true, message: "User removed" });
     } catch (err) {
         if (err.code === "WRONG_PASSWORD") {
             return json(403, { ok: false, message: "WRONG_PASSWORD" });

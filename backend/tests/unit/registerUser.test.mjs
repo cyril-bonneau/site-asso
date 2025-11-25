@@ -52,14 +52,13 @@ vi.mock("@aws-sdk/lib-dynamodb", () => {
     };
 });
 
-// 🔧 MOCK IMPORTANT : on bypasse complètement le rate-limit
 vi.mock("../../rateLimit/withRateLimit.js", () => ({
-    withRateLimit: (...args) => {
-        const handler = args[args.length - 1];
+    withRateLimit: (handler, _options) => {
         if (typeof handler !== "function") {
             throw new Error("withRateLimit mock: dernier argument non fonction");
         }
-        return handler; // on renvoie le handler “nu”
+        // on renvoie le handler tel quel, sans rate-limit
+        return handler;
     },
 }));
 

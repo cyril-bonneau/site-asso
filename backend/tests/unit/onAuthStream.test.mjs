@@ -25,9 +25,19 @@ vi.mock("@aws-sdk/client-dynamodb", () => {
 });
 
 vi.mock("@aws-sdk/util-dynamodb", () => ({
-    // on simplifie : marshall / unmarshall sont identités
     marshall: (obj) => obj,
-    unmarshall: (obj) => obj,
+    unmarshall: (obj) => {
+        // mini-unmarshall: { email: { S: "x" } } → { email: "x" }
+        const out = {};
+        for (const [key, value] of Object.entries(obj || {})) {
+            if (value && typeof value === "object" && "S" in value) {
+                out[key] = value.S;
+            } else {
+                out[key] = value;
+            }
+        }
+        return out;
+    },
 }));
 
 // --- Imports réels ---

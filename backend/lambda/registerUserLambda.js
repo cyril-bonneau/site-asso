@@ -61,10 +61,11 @@ async function registerUserCore(event) {
 
 
     } catch (err) {
-        return {
-            statusCode: err.statusCode || 500,
-            body: JSON.stringify({ error: "INTERNAL_ERROR" }),
-        };
+        console.error("registerUserCore error", err);
+        return json(err.statusCode || 500, {
+            ok: false,
+            message: "INTERNAL_ERROR",
+        });
     }
 }
 
@@ -155,7 +156,7 @@ async function createAuthEntry(email, password) {
                 };
             }
             console.error("Error in createAuthEntry transaction:", err);
-            return { statusCode: 500, error: "INTERNAL_ERROR" };
+            throw err
         }
     }
 }
