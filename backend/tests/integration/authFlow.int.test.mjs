@@ -1,6 +1,6 @@
 // backend/tests/integration/authFlow.int.test.mjs
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { callApi, getUserProfileByUserId } from "./config.int.mjs";
+import { callApi, getUserProfileByUserId, waitForUserIdByEmail } from "./config.int.mjs";
 
 // === Données de test ===
 // email unique à chaque run pour éviter les collisions en dev
@@ -18,27 +18,26 @@ let userId; // sera rempli après register
 describe("Parcours complet Auth (intégration)", () => {
     // 1) Création de l’utilisateur
     beforeAll(async () => {
-        const { status, body } = await callApi("PUT", "/registerUser", {
+        // 1) register
+        const { status, body } = await callApi("POST", "/auth/register", {
             email: TEST_EMAIL,
             password: TEST_PASSWORD,
             firstname: TEST_FIRSTNAME,
             lastname: TEST_LASTNAME,
         });
-        // ⚠️ adapte si tu renvoies 200 au lieu de 201
+
+        // ta lambda renvoie 201 + { ok, message }, pas userId
         expect([200, 201]).toContain(status);
         expect(body?.ok).toBe(true);
 
-        // ⚠️ Assumption : la lambda retourne userId
-        //  à adapter avec le vrai nom de propriété
-        expect(body?.userId).toBeDefined();
-        userId = body.userId;
+        // 2) récupérer le userId via USER_TABLE (EMAIL#... / UNIQUE)
+        userId = await waitForUserIdByEmail(TEST_EMAIL);
+        expect(userId).toBeDefined();
 
-        // Vérification en base dans USER_TABLE
+        // 3) vérifier que le profil a bien été projeté
         const userProfile = await getUserProfileByUserId(userId);
         expect(userProfile).toBeDefined();
         expect(userProfile.email).toBeDefined();
-        // Si tu stockes l’email normalisé :
-        // expect(userProfile.email).toBe(normalizeEmail(TEST_EMAIL)) (si tu l’exportes un jour)
     });
 
     // 2) Connexion
@@ -61,7 +60,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
     // 3) Update du user (profil / email selon ta logique)
     it("devrait permettre de mettre à jour le profil user", async () => {
-        const { status, body } = await callApi("PATCH", "/updateUser", {
+        const { status, body } = await callApi("PATCH", `/updateUser?id=${encodeURIComponent(userId)}`, {
             userId,
             firstname: TEST_NEW_FIRSTNAME,
             lastname: TEST_NEW_LASTNAME,
@@ -82,7 +81,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
     // 4) Changement de mot de passe
     it("devrait permettre de modifier le mot de passe", async () => {
-        const { status, body } = await callApi("PATCH", "/updatePassword", {
+        const { status, body } = await callApi("PATCH", `/updatePassword?id=${encodeURIComponent(userId)}`, {
             userId,
             oldPassword: TEST_PASSWORD,
             newPassword: TEST_NEW_PASSWORD,
@@ -103,7 +102,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(bodyOld?.message).toBe("WRONG_CREDENTIALS");
 
         // le nouveau fonctionne
-        const { status: statusNew, body: bodyNew } = await callApi("get", "/login", {
+        const { status: statusNew, body: bodyNew } = await callApi("GET", "/login", {
             email: TEST_EMAIL,
             password: TEST_NEW_PASSWORD,
         });
@@ -115,7 +114,8 @@ describe("Parcours complet Auth (intégration)", () => {
     // 5) Suppression du user
     it("devrait permettre de supprimer le user", async () => {
         const { status, body } = await callApi("DELETE", "/removeAuthUser", {
-            userId,
+            email: TEST_EMAIL,
+            id: userId,
             password: TEST_NEW_PASSWORD, // ou oldPassword selon ta lambda removeAuthUser
         });
 
