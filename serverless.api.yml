@@ -22,28 +22,8 @@ provider:
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
 
-  iam:
-    role:
-      statements:
-        - Effect: Allow
-          Action:
-            - dynamodb:PutItem
-            - dynamodb:GetItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:BatchWriteItem
-            - dynamodb:TransactWriteItems
-            - dynamodb:TransactGetItems
-            - dynamodb:ConditionCheckItem
-          Resource:
-            - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-            - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-
 plugins:
   - ./backend/node_modules/serverless-esbuild
-  - ./backend/node_modules/serverless-iam-roles-per-function
 
 custom:
   esbuild:
@@ -61,22 +41,6 @@ custom:
       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
-  api:
-    handler: backend/lambda/lambda.handler
-    events:
-      - httpApi: 
-          method: '*'
-          path: /api
-      - httpApi:
-          method: '*'
-          path: /api/{proxy+}
-
-  hello:
-    handler: backend/lambda/hello.handler
-    events:
-      - httpApi: 
-          method: GET
-          path: /hello
 
   addUser:
     handler: backend/lambda/addUserLambda.handler

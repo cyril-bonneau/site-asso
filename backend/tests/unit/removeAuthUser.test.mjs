@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Mocks hoisted
+// Mocks hoistés
 vi.mock("../../dal/checkPasswordByUserId.js", () => {
     const checkPasswordByUserIdMock = vi.fn();
     return {
@@ -66,7 +66,6 @@ describe("removeAuthUserLambda", () => {
         expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
             userId: "user-123",
             password: "wrongpassword",
-            table: "AuthTableTest",
         });
 
         expect(response.statusCode).toBe(403);
@@ -103,29 +102,36 @@ describe("removeAuthUserLambda", () => {
         expect(checkPasswordByUserIdMock).toHaveBeenCalledWith({
             userId: "user-123",
             password: "correctpassword",
-            table: "AuthTableTest",
         });
 
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
         const transactPayload = sendTransactToDbMock.mock.calls[0][0];
 
         expect(transactPayload).toEqual(
-            expect.objectContaining({
-                client: expect.any(Object),
-                TransactItems: expect.arrayContaining([
-                    expect.objectContaining({
-                        Delete: expect.objectContaining({
-                            TableName: "AuthTableTest",
-                        }),
+            expect.arrayContaining([
+                expect.objectContaining({
+                    Delete: expect.objectContaining({
+                        Key: {
+                            PK: "USER#user-123",
+                            SK: "AUTH",
+                        },
                     }),
-                ]),
-            })
+                }),
+                expect.objectContaining({
+                    Delete: expect.objectContaining({
+                        Key: {
+                            PK: "EMAIL#test@example.com",
+                            SK: "UNIQUE",
+                        },
+                    }),
+                }),
+            ])
         );
 
         expect(response.statusCode).toBe(201);
         expect(JSON.parse(response.body)).toEqual({
             ok: true,
-            message: "User removed"
+            message: "User removed",
         });
     });
 

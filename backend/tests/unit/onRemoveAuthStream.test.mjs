@@ -23,7 +23,7 @@ describe("onRemoveAuthStreamLambda", () => {
         process.env.USER_TABLE = "UserTableTest";
     });
 
-    it("builds a TransactWrite with PROFILE and EMAIL delete", async () => {
+    it("builds a TransactWrite avec PROFILE et EMAIL delete", async () => {
         const event = {
             Records: [
                 {
@@ -31,11 +31,11 @@ describe("onRemoveAuthStreamLambda", () => {
                     dynamodb: {
                         OldImage: {
                             email: "test@example.com",
-                            userId: "user-123"
-                        }
-                    }
-                }
-            ]
+                            userId: "user-123",
+                        },
+                    },
+                },
+            ],
         };
 
         sendTransactToDbMock.mockResolvedValueOnce({
@@ -48,36 +48,30 @@ describe("onRemoveAuthStreamLambda", () => {
         expect(sendTransactToDbMock).toHaveBeenCalledTimes(1);
         const call = sendTransactToDbMock.mock.calls[0][0];
 
-        expect(call).toEqual(
-            expect.objectContaining({
-                client: expect.any(Object),
-                TransactItems: [
-                    {
-                        Delete: {
-                            TableName: "UserTableTest",
-                            Key: {
-                                PK: "USER#user-123",
-                                SK: "PROFILE#user-123"
-                            },
-                            ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-                        },
+        // call est un tableau de TransactItems
+        expect(call).toEqual([
+            {
+                Delete: {
+                    Key: {
+                        PK: "USER#user-123",
+                        SK: "PROFILE#user-123",
                     },
-                    {
-                        Delete: {
-                            TableName: "UserTableTest",
-                            Key: {
-                                PK: "EMAIL@test@example.com",
-                                SK: "UNIQUE"
-                            },
-                            ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
-                        },
+                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+                },
+            },
+            {
+                Delete: {
+                    Key: {
+                        PK: "EMAIL#test@example.com",
+                        SK: "UNIQUE",
                     },
-                ],
-            })
-        );
+                    ConditionExpression: "attribute_exists(PK) AND attribute_exists(SK)",
+                },
+            },
+        ]);
     });
 
-    it("ignores non-REMOVE events", async () => {
+    it("ignore les événements non-REMOVE", async () => {
         const event = {
             Records: [
                 {
@@ -85,11 +79,11 @@ describe("onRemoveAuthStreamLambda", () => {
                     dynamodb: {
                         OldImage: {
                             email: "x@example.com",
-                            userId: "user-x"
-                        }
-                    }
-                }
-            ]
+                            userId: "user-x",
+                        },
+                    },
+                },
+            ],
         };
 
         await onRemoveAuthStreamHandler(event);

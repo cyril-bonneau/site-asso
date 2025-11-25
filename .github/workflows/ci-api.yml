@@ -100,9 +100,9 @@ jobs:
       - name: Run integration tests
         working-directory: .
         env:
-          AUTH_TABLE: site-asso-${{ env.STAGE }}-asso-auth-v2
-          USER_TABLE: site-asso-${{ env.STAGE }}-asso-main
-          RATE_LIMIT_TABLE: site-asso-${{ env.STAGE }}-rate-limit
+          AUTH_TABLE: site-asso-dev-asso-auth-v2
+          USER_TABLE: site-asso-dev-asso-main
+          RATE_LIMIT_TABLE: site-asso-dev-rate-limit
           AWS_REGION: "eu-west-3"
         run: |
           npm run test:integration
