@@ -9,6 +9,7 @@ import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { hashPassword } from "../auth/auth.js";
 import { json } from "../helpers/json.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
+import { sendTransactToDb } from "../dal/requestToDb.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
@@ -113,18 +114,14 @@ async function createAuthEntry(email, password) {
         });
 
         try {
-            const response = await ddb.send(new TransactWriteCommand({
-                TransactItems: transaction,
-                ReturnCancellationReasons: true,
-                ReturnConsumedCapacity: "TOTAL",
-            }));
 
-            if (response.$metadata.httpStatusCode === 200) {
-                console.log("createAuthEntry success", { email: normalizedEmail, userId: id })
-                return {
-                    statusCode: response.$metadata.httpStatusCode,
-                    message: "user successfully created"
-                }
+            await sendTransactToDb(transaction, true);
+
+            console.log("createAuthEntry success", { email: normalizedEmail, userId: id })
+            return {
+                ok: true,
+                statusCode: 201,
+                message: "user successfully created"
             }
 
         } catch (err) {

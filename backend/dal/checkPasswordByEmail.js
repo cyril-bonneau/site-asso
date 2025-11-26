@@ -19,7 +19,12 @@ export async function checkPasswordByEmail({ password, email }) {
         throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
     }
 
-    return verifyPassword(auth.passwordHash, password)
+    if (verifyPassword(auth.passwordHash, password)) {
+        return {
+            check: true,
+            userid: auth.userId
+        }
+    }
 }
 
 async function getAuthByEmail(email) {
@@ -27,14 +32,15 @@ async function getAuthByEmail(email) {
         const res = await ddb.send(
             new QueryCommand({
                 TableName: AUTH_TABLE,
-                IndexName: "GSI1v3",
+                IndexName: "GSI1v4",
                 KeyConditionExpression: "GSI1PK = :pk",
                 ExpressionAttributeValues: {
                     ":pk": `EMAIL#${email}`,
                 },
-                ProjectionExpression: "passwordHash",
+                ProjectionExpression: "passwordHash, userId",
             })
         )
+        console.log("getAuthByEmail result:", res.Items[0]);
         return res.Items[0]
     } catch (err) {
         return err

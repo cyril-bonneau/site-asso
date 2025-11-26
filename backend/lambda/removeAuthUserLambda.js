@@ -7,19 +7,24 @@ const AUTH_TABLE = process.env.AUTH_TABLE;
 export const handler = async (event) => {
     let data
     try {
-        data = JSON.parse(event.body)
-    } catch (err) {
-        return json(400, { ok: false, message: "INVALID_JSON_BODY" })
-    }
-    const { email, password, id } = data
 
-    if (!email || !password || !id) {
-        return json(400, { ok: false, message: "MISSING_CRUCIAL_DATA" })
-    }
+        const id = event?.queryStringParameters?.id;
+        try {
+            data = JSON.parse(event.body)
+        } catch (err) {
+            return json(400, { ok: false, message: "INVALID_JSON_BODY" })
+        }
 
-    try {
+        const { email, password } = data
+
+        if (!email || !password || !id) {
+            return json(400, { ok: false, message: "MISSING_CRUCIAL_DATA" })
+        }
+
         await removeAuthUser(id, email, password);
+
         return json(200, { ok: true, message: "User removed" });
+
     } catch (err) {
         if (err.code === "WRONG_PASSWORD") {
             return json(403, { ok: false, message: "WRONG_PASSWORD" });

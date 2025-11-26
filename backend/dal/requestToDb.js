@@ -3,18 +3,22 @@ import {
     DynamoDBDocumentClient,
     TransactWriteCommand,
     UpdateCommand,
-    DeleteCommand
+    DeleteCommand,
+    GetCommand
 } from "@aws-sdk/lib-dynamodb";
+
+const USER_TABLE = process.env.USER_TABLE;
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
 
-export async function sendTransactToDb(transactItems) {
+export async function sendTransactToDb(transactItems, CancellationReasons) {
     try {
         await ddb.send(
             new TransactWriteCommand({
                 TransactItems: transactItems,
+                ReturnCancellationReasons: CancellationReasons || false,
                 ReturnConsumedCapacity: "TOTAL",
             })
         );
@@ -39,5 +43,23 @@ export async function removeFromDb(removeRequest) {
     } catch (err) {
         console.log("error while removing data", err)
         throw err
+    }
+}
+
+export async function getUserProfileByUserId(userId) {
+    try {
+        await ddb.send(
+            new GetCommand({
+                TableName: USER_TABLE,
+                Key: {
+                    PK: `USER#${userId}`,
+                    SK: "PROFILE"
+                },
+                ProjectionExpression: "lastName, firstName, email",
+            })
+        )
+    } catch (err) {
+        console.error("getUserProfileByUserId error", err)
+        return undefined;
     }
 }
