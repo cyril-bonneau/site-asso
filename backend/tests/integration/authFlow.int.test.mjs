@@ -39,8 +39,8 @@ describe("Parcours complet Auth (intégration)", () => {
         console.log("RegisterUser Lambda response:", response);
 
         expect(response.statusCode).toBe(201);
-        expect(response?.ok).toBe(true);
-        expect(response?.message).toBe("user successfully created");
+        expect(response.body.ok).toBe(true);
+        expect(response.body.message).toBe("user successfully created");
     });
 
     // 2) Connexion
@@ -60,13 +60,13 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const response = decode(payload.Payload);
 
-        userId = response.userId;
+        userId = response.body.userId;
 
         expect(response).toBeDefined();
-        expect(response.userId).toBeDefined();
         expect(response.statusCode).toBe(200);
-        expect(response?.ok).toBe(true);
-        expect(response?.message).toBe("LOGGED_IN");
+        expect(response.body.userId).toBeDefined();
+        expect(response.body.ok).toBe(true);
+        expect(response.body.message).toBe("LOGGED_IN");
 
     });
 
@@ -94,8 +94,8 @@ describe("Parcours complet Auth (intégration)", () => {
 
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(200);
-        expect(response?.ok).toBe(true);
-        expect(response?.updated).toBe({ email: true, profile: true })
+        expect(response.body.ok).toBe(true);
+        expect(response.body.updated).toBe({ email: true, profile: true })
 
         const updatedProfile = await getUserProfileByUserId(userId);
         expect(updatedProfile).toBeDefined();
@@ -125,7 +125,7 @@ describe("Parcours complet Auth (intégration)", () => {
         let response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(200);
-        expect(response?.ok).toBe(true);
+        expect(response.body.ok).toBe(true);
 
         body = {
             email: TEST_NEW_EMAIL,
@@ -142,8 +142,8 @@ describe("Parcours complet Auth (intégration)", () => {
         response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(403); // WRONG_CREDENTIALS attendu
-        expect(response?.ok).toBe(false);
-        expect(response?.message).toBe("WRONG_CREDENTIALS");
+        expect(response.body.ok).toBe(false);
+        expect(response.body.message).toBe("WRONG_CREDENTIALS");
 
         body = {
             email: TEST_NEW_EMAIL,
@@ -161,9 +161,9 @@ describe("Parcours complet Auth (intégration)", () => {
         response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(200);
-        expect(response?.ok).toBe(true);
-        expect(response?.message).toBe("LOGGED_IN");
-        expect(response?.userId).toBe(userId);
+        expect(response.body.ok).toBe(true);
+        expect(response.body.message).toBe("LOGGED_IN");
+        expect(response.body.userId).toBe(userId);
     });
 
     // 5) Suppression du user
@@ -186,7 +186,7 @@ describe("Parcours complet Auth (intégration)", () => {
         const response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(200);
-        expect(response?.ok).toBe(true);
+        expect(response.body.ok).toBe(true);
 
         const profileAfterDelete = await getUserProfileByUserId(userId);
         expect(profileAfterDelete).toBeUndefined();
