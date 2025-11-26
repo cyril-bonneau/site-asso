@@ -37,7 +37,7 @@ async function loginCore({ email, password }) {
 
     try {
 
-        const { check, userId } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
+        const { check, userId = undefined } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
 
         if (!check) {
             return json(403, { ok: false, message: "WRONG_CREDENTIALS" });

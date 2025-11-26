@@ -102,6 +102,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.updated).toStrictEqual({ email: true, profile: true })
 
         const updatedProfile = await getUserProfileByUserId(userId);
+        console.log("updatedProfile", updatedProfile);
         expect(updatedProfile).toBeDefined();
         expect(updatedProfile.firstName).toBe(TEST_FIRSTNAME);
         expect(updatedProfile.lastName).toBe(TEST_LASTNAME);

@@ -19,10 +19,14 @@ export async function checkPasswordByEmail({ password, email }) {
         throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
     }
 
-    if (verifyPassword(auth.passwordHash, password)) {
+    if (await verifyPassword(auth.passwordHash, password)) {
         return {
             check: true,
             userId: auth.userId
+        }
+    } else {
+        return {
+            check: false
         }
     }
 }
