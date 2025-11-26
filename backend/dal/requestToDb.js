@@ -7,8 +7,6 @@ import {
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
-const USER_TABLE = "site-asso-dev-asso-main";
-
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
 });
@@ -24,6 +22,16 @@ export async function sendTransactToDb(transactItems, CancellationReasons) {
         );
     } catch (err) {
         console.error("DDB TRANSACT ERROR:", err)
+        throw err
+    }
+}
+
+export async function getFromDb(getRequest) {
+    try {
+        const { Item } = await ddb.send(new GetCommand(getRequest))
+        return Item
+    } catch (err) {
+        console.log("error while getting data", err)
         throw err
     }
 }
