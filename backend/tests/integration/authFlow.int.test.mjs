@@ -60,6 +60,8 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const response = decode(payload.Payload);
 
+        console.log("LoginUser Lambda response:", response);
+
         userId = response.body.userId;
 
         expect(response).toBeDefined();
@@ -91,6 +93,8 @@ describe("Parcours complet Auth (intégration)", () => {
         );
 
         const response = decode(payload.Payload);
+
+        console.log("UpdateAuthUser Lambda response:", response);
 
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(200);
@@ -124,6 +128,8 @@ describe("Parcours complet Auth (intégration)", () => {
 
         let response = decode(payload.Payload);
 
+        console.log("UpdateAuthUserPassword Lambda response:", response);
+
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
 
@@ -140,6 +146,8 @@ describe("Parcours complet Auth (intégration)", () => {
         );
 
         response = decode(payload.Payload);
+
+        console.log("LoginUser Lambda response (wrong password):", response);
 
         expect(response.statusCode).toBe(403); // WRONG_CREDENTIALS attendu
         expect(response.body.ok).toBe(false);
@@ -159,6 +167,8 @@ describe("Parcours complet Auth (intégration)", () => {
         );
 
         response = decode(payload.Payload);
+
+        console.log("LoginUser Lambda response (new password):", response);
 
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
@@ -184,6 +194,8 @@ describe("Parcours complet Auth (intégration)", () => {
         );
 
         const response = decode(payload.Payload);
+
+        console.log("RemoveAuthUser Lambda response:", response);
 
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
