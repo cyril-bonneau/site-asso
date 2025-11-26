@@ -203,6 +203,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.ok).toBe(true);
 
         const profileAfterDelete = await getUserProfileByUserId(userId);
+        console.log("profileAfterDelete", profileAfterDelete);
         expect(profileAfterDelete).toBeUndefined();
     });
 
