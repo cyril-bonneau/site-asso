@@ -1,7 +1,3 @@
-import {
-    DynamoDBClient
-} from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { nanoid } from "nanoid";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
@@ -12,10 +8,6 @@ import { normalizeEmail } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
 
 // event must contain email, password in body
 
@@ -113,11 +105,11 @@ async function createAuthEntry(email, password) {
             await sendTransactToDb(transaction, true);
 
             console.log("createAuthEntry success", { email: normalizedEmail, userId: id })
-            return {
+            return json(201, {
                 ok: true,
                 statusCode: 201,
                 message: "user successfully created"
-            }
+            });
 
         } catch (err) {
 
