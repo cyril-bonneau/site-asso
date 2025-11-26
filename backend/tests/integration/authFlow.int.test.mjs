@@ -101,7 +101,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.ok).toBe(true);
         expect(response.body.updated).toStrictEqual({ email: true, profile: true })
 
-        await new Promise(resolve => setTimeout(resolve, 4000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const updatedProfile = await getUserProfileByUserId(userId);
         console.log("updatedProfile", updatedProfile);
         expect(updatedProfile).toBeDefined();
@@ -203,7 +203,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.ok).toBe(true);
         expect(response.body.message).toBe("User removed");
 
-        await new Promise(resolve => setTimeout(resolve, 4000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const profileAfterDelete = await getUserProfileByUserId(userId);
         console.log("profileAfterDelete", profileAfterDelete);
         expect(profileAfterDelete).toBeUndefined();
