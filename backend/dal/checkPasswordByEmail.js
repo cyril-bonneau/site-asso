@@ -22,7 +22,7 @@ export async function checkPasswordByEmail({ password, email }) {
     if (verifyPassword(auth.passwordHash, password)) {
         return {
             check: true,
-            userid: auth.userId
+            userId: auth.userId
         }
     }
 }
