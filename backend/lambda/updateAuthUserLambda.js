@@ -27,7 +27,7 @@ export const handler = async (event) => {
         const hasEmailChange =
             oldEmail && newEmail && oldEmail !== newEmail;
         const hasProfileChange =
-            firstName || lastName;
+            firstName !== undefined || lastName !== undefined;
 
         if (!hasEmailChange && !hasProfileChange) {
             return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
@@ -90,8 +90,11 @@ async function updateUserTransactional(params) {
 
         await sendTransactToDb(transactItems)
 
+        console.info("User update transaction successful for user:", userId);
+
         return json(200, {
-            ok: true, updated: {
+            ok: true,
+            updated: {
                 email: hasEmailChange,
                 profile: hasProfileChange
             }

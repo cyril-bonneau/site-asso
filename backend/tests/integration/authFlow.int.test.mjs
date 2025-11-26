@@ -183,7 +183,7 @@ describe("Parcours complet Auth (intégration)", () => {
             password: TEST_NEW_PASSWORD,
         }
 
-        payload = await client.send(
+        const payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-removeAuthUser",
                 Payload: Buffer.from(JSON.stringify({

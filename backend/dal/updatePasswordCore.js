@@ -14,7 +14,6 @@ export async function updatePasswordCore({ userId, oldPassword, newPassword }) {
 
     const hashedPassword = await hashPassword(newPassword)
 
-
     return {
         TableName: AUTH_TABLE,
         Key: { PK: `USER#${userId}`, SK: "AUTH" },
