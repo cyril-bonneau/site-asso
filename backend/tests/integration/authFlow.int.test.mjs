@@ -99,7 +99,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
-        expect(response.body.updated).toBe({ email: true, profile: true })
+        expect(response.body.updated).toStrictEqual({ email: true, profile: true })
 
         const updatedProfile = await getUserProfileByUserId(userId);
         expect(updatedProfile).toBeDefined();
