@@ -48,7 +48,7 @@ export async function removeFromDb(removeRequest) {
 
 export async function getUserProfileByUserId(userId) {
     try {
-        await ddb.send(
+        return await ddb.send(
             new GetCommand({
                 TableName: USER_TABLE,
                 Key: {
