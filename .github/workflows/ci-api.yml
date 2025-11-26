@@ -97,13 +97,7 @@ jobs:
         run: |
           npx serverless deploy --config serverless.api.yml --stage dev
 
-      # - name: Run integration tests
-      #   working-directory: ./backend
-      #   env:
-      #     AUTH_TABLE: site-asso-dev-asso-auth-v2
-      #     USER_TABLE: site-asso-dev-asso-main
-      #     API_BASE_URL: https://qn96ec1ukl.execute-api.eu-west-3.amazonaws.com
-      #     RATE_LIMIT_TABLE: site-asso-dev-rate-limit
-      #     AWS_REGION: "eu-west-3"
-      #   run: |
-      #     npm run test:integration
+      - name: Run integration tests
+        working-directory: ./backend
+        run: |
+          npm run test:integration
