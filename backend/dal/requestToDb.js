@@ -53,7 +53,7 @@ export async function getUserProfileByUserId(userId) {
                 TableName: USER_TABLE,
                 Key: {
                     PK: `USER#${userId}`,
-                    SK: "PROFILE"
+                    SK: `PROFILE#${userId}`
                 },
                 ProjectionExpression: "lastName, firstName, email",
             })
