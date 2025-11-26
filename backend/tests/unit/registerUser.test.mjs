@@ -101,6 +101,7 @@ describe("registerUserLambda", () => {
         expect(response.statusCode).toBe(201);
         expect(JSON.parse(response.body)).toEqual({
             ok: true,
+            statusCode: 201,
             message: "user successfully created",
         });
     });

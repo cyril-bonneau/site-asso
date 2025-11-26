@@ -54,12 +54,7 @@ async function registerUserCore(event) {
             };
         }
 
-        const res = await createAuthEntry(email, password);
-
-        if (res.statusCode === 200) return json(201, { ok: true, message: res.message });
-
-        return json(res.statusCode, { ok: false, ...res })
-
+        return await createAuthEntry(email, password);
 
     } catch (err) {
         console.error("registerUserCore error", err);
