@@ -7,7 +7,7 @@ import {
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
-const USER_TABLE = "${cf:site-asso-infra-${sls:stage}.DdbUserTable}";
+const USER_TABLE = "site-asso-dev-asso-main";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
