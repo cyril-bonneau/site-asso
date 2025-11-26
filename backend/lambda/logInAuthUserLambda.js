@@ -45,8 +45,8 @@ async function loginCore({ email, password }) {
 
         return json(200, {
             ok: true,
+            userId: userId,
             message: "LOGGED_IN",
-            userId,
             // accessToken,
             // refreshToken,
             // userId,
