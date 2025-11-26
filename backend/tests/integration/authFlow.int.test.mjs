@@ -1,6 +1,6 @@
 // backend/tests/integration/authFlow.int.test.mjs
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { getUserProfileByUserId } from "../../dal/requestToDb.js";
+import { getUserProfileByUserId } from "../testDbRequest/get.js";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { decode } from "../../helpers/toolbox.js";
 
