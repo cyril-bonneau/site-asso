@@ -5,5 +5,9 @@ export function normalizeEmail(email) {
 export function decode(payload) {
     const decoder = new TextDecoder("utf-8");
     const payloadString = decoder.decode(payload);
-    return JSON.parse(payloadString);
+    let response = JSON.parse(payloadString);
+    return {
+        ...response,
+        body: JSON.parse(response.body)
+    };
 }
