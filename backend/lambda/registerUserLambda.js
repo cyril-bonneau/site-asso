@@ -107,7 +107,6 @@ async function createAuthEntry(email, password) {
             console.log("createAuthEntry success", { email: normalizedEmail, userId: id })
             return json(201, {
                 ok: true,
-                statusCode: 201,
                 message: "user successfully created"
             });
 

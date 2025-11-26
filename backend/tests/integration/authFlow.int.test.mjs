@@ -2,6 +2,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { getUserProfileByUserId } from "../../dal/requestToDb.js";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { decode } from "../../helpers/toolbox.js";
 
 const client = new LambdaClient({ region: "eu-west-3" });
 
@@ -26,12 +27,14 @@ describe("Parcours complet Auth (intégration)", () => {
             password: TEST_PASSWORD,
         }
 
-        const response = await client.send(
+        const payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-registerUser",
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
+
+        const response = decode(payload.Payload);
 
         console.log("RegisterUser Lambda response:", response);
 
@@ -48,12 +51,14 @@ describe("Parcours complet Auth (intégration)", () => {
             password: TEST_PASSWORD,
         }
 
-        const response = await client.send(
+        const payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-loginUser",
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
+
+        const response = decode(payload.Payload);
 
         userId = response.userId;
 
@@ -75,7 +80,7 @@ describe("Parcours complet Auth (intégration)", () => {
             newEmail: TEST_NEW_EMAIL,
         }
 
-        const response = await client.send(
+        const payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-updateAuthUser",
                 Payload: Buffer.from(JSON.stringify({
@@ -84,6 +89,8 @@ describe("Parcours complet Auth (intégration)", () => {
                 })),
             })
         );
+
+        const response = decode(payload.Payload);
 
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(200);
@@ -105,7 +112,7 @@ describe("Parcours complet Auth (intégration)", () => {
             newPassword: TEST_NEW_PASSWORD,
         }
 
-        let response = await client.send(
+        let payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-updateAuthUserPassword",
                 Payload: Buffer.from(JSON.stringify({
@@ -115,6 +122,8 @@ describe("Parcours complet Auth (intégration)", () => {
             })
         );
 
+        let response = decode(payload.Payload);
+
         expect(response.statusCode).toBe(200);
         expect(response?.ok).toBe(true);
 
@@ -123,12 +132,14 @@ describe("Parcours complet Auth (intégration)", () => {
             password: TEST_PASSWORD, // ancien password, doit échouer
         }
 
-        response = await client.send(
+        payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-loginUser",
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
+
+        response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(403); // WRONG_CREDENTIALS attendu
         expect(response?.ok).toBe(false);
@@ -140,12 +151,14 @@ describe("Parcours complet Auth (intégration)", () => {
         }
 
         // le nouveau fonctionne
-        response = await client.send(
+        payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-loginUser",
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
+
+        response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(200);
         expect(response?.ok).toBe(true);
@@ -160,7 +173,7 @@ describe("Parcours complet Auth (intégration)", () => {
             password: TEST_NEW_PASSWORD,
         }
 
-        response = await client.send(
+        payload = await client.send(
             new InvokeCommand({
                 FunctionName: "site-asso-api-dev-removeAuthUser",
                 Payload: Buffer.from(JSON.stringify({
@@ -169,6 +182,8 @@ describe("Parcours complet Auth (intégration)", () => {
                 })),
             })
         );
+
+        const response = decode(payload.Payload);
 
         expect(response.statusCode).toBe(200);
         expect(response?.ok).toBe(true);
