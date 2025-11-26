@@ -54,7 +54,6 @@ async function passwordManager({
             oldPassword,
             newPassword
         })
-        console.log("type updatePasswordResult", typeof updatePasswordResult, updatePasswordResult);
         const resp = await sendUpdateToDb(updatePasswordResult)
 
         console.log("resp", resp);

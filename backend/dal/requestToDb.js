@@ -59,7 +59,7 @@ export async function getUserProfileByUserId(userId) {
             })
         )
         console.log("getUserProfileByUserId result", data)
-        return data.Item;
+        return data;
     } catch (err) {
         console.error("getUserProfileByUserId error", err)
         return undefined;
