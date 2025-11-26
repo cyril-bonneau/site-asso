@@ -22,7 +22,6 @@ export async function getUserProfileByUserId(userId) {
                 ProjectionExpression: "lastName, firstName, email",
             })
         )
-        console.log("getUserProfileByUserId result", Item)
         return Item;
     } catch (err) {
         console.error("getUserProfileByUserId error", err)
