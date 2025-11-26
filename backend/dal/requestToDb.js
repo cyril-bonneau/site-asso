@@ -48,7 +48,7 @@ export async function removeFromDb(removeRequest) {
 
 export async function getUserProfileByUserId(userId) {
     try {
-        return await ddb.send(
+        const data = await ddb.send(
             new GetCommand({
                 TableName: USER_TABLE,
                 Key: {
@@ -58,6 +58,8 @@ export async function getUserProfileByUserId(userId) {
                 ProjectionExpression: "lastName, firstName, email",
             })
         )
+        console.log("getUserProfileByUserId result", data)
+        return data.Item;
     } catch (err) {
         console.error("getUserProfileByUserId error", err)
         return undefined;
