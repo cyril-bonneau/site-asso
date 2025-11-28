@@ -42,7 +42,17 @@ describe("Parcours complet Auth (intégration)", () => {
 
         expect(response.statusCode).toBe(201);
         expect(response.body.ok).toBe(true);
+        expect(response.body.userId).toBeDefined();
         expect(response.body.message).toBe("user successfully created");
+
+        userId = response.body.userId;
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const profileAfterCreation = await getUserProfileByUserId(userId);
+        expect(profileAfterCreation).toBeDefined();
+        expect(profileAfterCreation.email).toBe(TEST_EMAIL);
+        expect(profileAfterCreation.firstName).toBe(TEST_FIRSTNAME);
+        expect(profileAfterCreation.lastName).toBe(TEST_LASTNAME);
     });
 
     // 2) Connexion
