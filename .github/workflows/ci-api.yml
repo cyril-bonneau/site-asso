@@ -42,51 +42,9 @@ jobs:
   #       working-directory: ./backend
   #       run: npm run test:unit
 
-  # setup-deploy:
-  #   name: Setup for deployment
-  #   # needs: test
-  #   runs-on: ubuntu-latest
-
-  #   permissions:
-  #     id-token: write      # pour l'OIDC vers AWS
-  #     contents: read
-
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Use Node.js 22
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: |
-  #           backend/package-lock.json
-
-  #     - name: Install backend dependencies
-  #       working-directory: ./backend
-  #       run: npm ci
-
-  setup-aws:
-    name: Setup AWS credentials
-    # needs: setup-deploy
-    runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write      # pour l'OIDC vers AWS
-      contents: read
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: eu-west-3
-          role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
-          role-session-name: site-asso-ci
-
   deploy-infra:
     name: Deploy Infra (dev)
-    needs: setup-aws
+    # needs: setup-aws
     runs-on: ubuntu-latest
 
     permissions:
@@ -108,6 +66,13 @@ jobs:
       - name: Install backend dependencies
         working-directory: ./backend
         run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-3
+          role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
+          role-session-name: site-asso-ci
 
       # - name: Debug - config Serverless compilée
       #   working-directory: .
@@ -150,6 +115,13 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-3
+          role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
+          role-session-name: site-asso-ci
+
       - name: Deploy API (dev)
         working-directory: .
         env:
@@ -159,7 +131,9 @@ jobs:
 
   integration-tests:
     name: Integration tests (dev)
-    needs: deploy-api
+    needs: 
+      - deploy-api
+      - deploy-infra
     runs-on: ubuntu-latest
 
     permissions:
@@ -181,7 +155,7 @@ jobs:
       - name: Install backend dependencies
         working-directory: ./backend
         run: npm ci
-        
+
       - name: Run integration tests
         working-directory: ./backend
         run: |
