@@ -45,7 +45,7 @@ vi.mock("@aws-sdk/util-dynamodb", () => ({
 import { __mocks as ddbMocks } from "@aws-sdk/client-dynamodb";
 const { sendMock } = ddbMocks;
 
-describe("onAuthStreamLambda", () => {
+describe("onRegisterAuthLambda", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         process.env.USER_TABLE = "UserTableTest";
@@ -53,7 +53,7 @@ describe("onAuthStreamLambda", () => {
 
     it("insère les données dans USER_TABLE quand il reçoit un event INSERT", async () => {
         const { handler: onAuthStreamHandler } = await import(
-            "../../lambda/onAuthStreamLambda.js"
+            "../../lambda/onRegisterAuthLambda.js"
         );
 
         const event = {
@@ -115,7 +115,7 @@ describe("onAuthStreamLambda", () => {
 
     it("ignore les événements non-INSERT", async () => {
         const { handler: onAuthStreamHandler } = await import(
-            "../../lambda/onAuthStreamLambda.js"
+            "../../lambda/onRegisterAuthLambda.js"
         );
 
         const event = {
@@ -138,7 +138,7 @@ describe("onAuthStreamLambda", () => {
 
     it("remonte l'erreur DynamoDB brute (pass-through) quand la projection échoue", async () => {
         const { handler: onAuthStreamHandler } = await import(
-            "../../lambda/onAuthStreamLambda.js"
+            "../../lambda/onRegisterAuthLambda.js"
         );
 
         const event = {

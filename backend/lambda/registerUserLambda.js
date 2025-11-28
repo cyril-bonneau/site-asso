@@ -3,11 +3,13 @@ import { nanoid } from "nanoid";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 
 import { hashPassword } from "../auth/auth.js";
-import { json } from "../helpers/json.js";
+import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
+import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
+const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
 
 // event must contain email, password in body
 
@@ -27,10 +29,11 @@ async function registerUserCore(event) {
             return json(400, { ok: false, message: "INVALID_JSON_BODY" })
         }
 
-        const { email, password } = data
+        const email = normalizeEmail(data?.email)
+        const { password, firstName, lastName } = data ?? {}
 
-        if (!email || !password) {
-            return json(400, { ok: false, message: "MISSING_CREDENTIALS" })
+        if (!email || !password || !firstName || !lastName) {
+            return json(400, { ok: false, message: "MISSING_REQUIRED_INFO" })
         }
 
         const check = await validatePasswordBackend(password, {
@@ -46,7 +49,29 @@ async function registerUserCore(event) {
             };
         }
 
-        return await createAuthEntry(email, password);
+        const res = await createAuthEntry(email, password);
+
+        if (res.error === "EMAIL_ALREADY_EXISTS") {
+            return json(409, { ok: false, message: "EMAIL_ALREADY_EXISTS" })
+        } else if (res.statusCode !== 201) {
+            return json(res.statusCode || 500, { ok: false, message: res.error || "INTERNAL_ERROR" })
+        }
+
+        // il est attendu au minimum userId, email, firstName, lastName
+        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId });
+        const eventEntry = buildUserRegisterEvent(detail);
+
+        const resultEvent = await eventBridgePutEvents(eventEntry);
+        if (!resultEvent.FailedEntryCount) {
+            return res;
+        }
+
+        console.error("registerUserCore: eventBridgePutEvents failed", {
+            FailedEntryCount: resultEvent.FailedEntryCount,
+            Entries: resultEvent.Entries
+        });
+
+        return json(500, { ok: false, message: "AUTH_USER_CREATED_BUT_EVENT_BRIDGE_ERROR" });
 
     } catch (err) {
         console.error("registerUserCore error", err);
@@ -59,54 +84,53 @@ async function registerUserCore(event) {
 
 async function createAuthEntry(email, password) {
 
-    const normalizedEmail = normalizeEmail(email);
     const hashedPwd = await hashPassword(password);
     const maxIdRetries = 3;
     for (let attempt = 0; attempt < maxIdRetries; attempt++) {
         const id = nanoid();
         const now = new Date().toISOString()
 
-        const transaction = []
-
-        transaction.push({
-            Put: {
-                TableName: AUTH_TABLE,
-                Item: {
-                    PK: `EMAIL#${normalizedEmail}`,
-                    SK: "UNIQUE",
-                    userId: `USER#${id}`,
-                    createdAt: now,
+        const transaction = [
+            {
+                Put: {
+                    TableName: AUTH_TABLE,
+                    Item: {
+                        PK: `USER#${id}`,
+                        SK: "AUTH",
+                        userId: id,
+                        GSI1PK: `EMAIL#${email}`,
+                        GSI1SK: `USER#${id}`,
+                        email: email,
+                        passwordHash: hashedPwd,
+                        createdAt: now,
+                    },
+                    ConditionExpression: "attribute_not_exists(PK)",
+                    ReturnValuesOnConditionCheckFailure: "ALL_OLD",
                 },
-                ConditionExpression: "attribute_not_exists(PK)",
-                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-            }
-        });
-
-        transaction.push({
-            Put: {
-                TableName: AUTH_TABLE,
-                Item: {
-                    PK: `USER#${id}`,
-                    SK: "AUTH",
-                    userId: id,
-                    GSI1PK: `EMAIL#${normalizedEmail}`,
-                    GSI1SK: `USER#${id}`,
-                    email: normalizedEmail,
-                    passwordHash: hashedPwd,
-                    createdAt: now,
-                },
-                ConditionExpression: "attribute_not_exists(PK)",
-                ReturnValuesOnConditionCheckFailure: "ALL_OLD",
             },
-        });
+            {
+                Put: {
+                    TableName: AUTH_TABLE,
+                    Item: {
+                        PK: `EMAIL#${email}`,
+                        SK: "UNIQUE",
+                        userId: `USER#${id}`,
+                        createdAt: now,
+                    },
+                    ConditionExpression: "attribute_not_exists(PK)",
+                    ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+                }
+            }
+        ];
 
         try {
 
             await sendTransactToDb(transaction, true);
 
-            console.log("createAuthEntry success", { email: normalizedEmail, userId: id })
+            console.log("createAuthEntry success", { email: email, userId: id })
             return json(201, {
                 ok: true,
+                userId: id,
                 message: "user successfully created"
             });
 
@@ -141,5 +165,23 @@ async function createAuthEntry(email, password) {
             console.error("Error in createAuthEntry transaction:", err);
             throw err
         }
+    }
+}
+
+function buildUserRegisterDetail({ userId, email, firstName, lastName }) {
+    return {
+        userId: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+    }
+}
+
+function buildUserRegisterEvent(detail) {
+    return {
+        Source: "site-asso.auth.register",
+        DetailType: "UserRegistered",
+        EventBusName: EVENT_BUS_NAME,
+        Detail: JSON.stringify(detail),
     }
 }

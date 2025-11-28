@@ -21,6 +21,7 @@ provider:
     # Récupère la table depuis la stack infra (via Outputs)
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+    AWS_REGION: ${self:provider.region}
 
 plugins:
   - ./backend/node_modules/serverless-esbuild
@@ -78,6 +79,7 @@ functions:
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
+      REGISTER_EVENT_BUS: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusName}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -85,6 +87,11 @@ functions:
           - dynamodb:TransactWriteItems
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+
+      - Effect: Allow
+        Action:
+          - events:PutEvents
+        Resource: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusArn}
 
       - Effect: Allow
         Action:
@@ -193,41 +200,36 @@ functions:
           method: DELETE
           path: /removeAuthUser
           
-  onAuthUserStream: #Ajout de nouveau user dans la table générale des users
-    handler: backend/lambda/onAuthStreamLambda.handler
+  onRegisterAuth: #Ajout de nouveau user dans la table générale des users
+    handler: backend/lambda/onRegisterAuthLambda.handler
     architecture: arm64           # ARM64 conseillé
     memorySize: 1024              # 1024–1536 Mo pour marge CPU
     timeout: 30
     environment:
-      USERS_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     events:
-      - stream:
-          type: dynamodb
-          arn: ${cf:site-asso-infra-${sls:stage}.DdbAuthStreamArn}  # <- Output ARN du stream
-          batchSize: 10
-          startingPosition: LATEST
-          maximumRetryAttempts: 3
-          bisectBatchOnFunctionError: true
-          destinations:
-            onFailure:
-              type: sqs
-              arn:
-                Fn::GetAtt: [ AuthStreamDLQ, Arn ]
+      - eventBridge:
+          eventBus: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusName}
+          pattern:
+            source:
+              - site-asso.auth.register
+            detail-type:
+              - UserRegistered
+          deadLetterQueueArn:
+            Fn::GetAtt: 
+              - RegisterEventDLQ
+              - Arn
+          retryPolicy:
+            maximumRetryAttempts: 3
+            maximumEventAgeInSeconds: 3600
     iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:PutItem
-          - dynamodb:UpdateItem
+          - dynamodb:TransactWriteItems
           - dynamodb:ConditionCheckItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-
-      - Effect: Allow
-        Action:
-          - sqs:SendMessage
-          - sqs:GetQueueAttributes
-        Resource:
-          - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
   # onUpdateAuthUserStream: #Ajout de nouveau user dans la table générale des users
   #   handler: backend/lambda/onUpdateAuthStreamLambda.handler
@@ -273,7 +275,7 @@ functions:
     memorySize: 1024              # 1024–1536 Mo pour marge CPU
     timeout: 30
     environment:
-      USERS_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     events:
       - stream:
           type: dynamodb
@@ -290,9 +292,9 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:DeleteItem
           - dynamodb:TransactWriteItems
           - dynamodb:ConditionCheckItem
-          - dynamodb:DeleteItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
 
@@ -309,6 +311,11 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:service}-${sls:stage}-authstream-dlq
+
+    RegisterEventDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:service}-${sls:stage}-register-event-dlq
 
 package:
   patterns:

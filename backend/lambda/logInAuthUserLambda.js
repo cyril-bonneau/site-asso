@@ -1,5 +1,5 @@
 import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
-import { json } from "../helpers/json.js";
+import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 

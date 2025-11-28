@@ -42,11 +42,9 @@ jobs:
         working-directory: ./backend
         run: npm run test:unit
 
-  deploy-dev:
-    name: Deploy API (dev)
+  setup-deploy:
+    name: Setup for deployment
     needs: test
-    # Ne déploie que sur la branche principale, et seulement sur les push (pas PR)
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -57,10 +55,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             backend/package-lock.json
@@ -69,6 +67,16 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+  setup-aws:
+    name: Setup AWS credentials
+    needs: setup-deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write      # pour l'OIDC vers AWS
+      contents: read
+
+    steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -76,12 +84,22 @@ jobs:
           role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
           role-session-name: site-asso-ci
 
-      - name: Debug - config Serverless compilée
-        working-directory: .
-        env:
-          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-        run: |
-          npx serverless print --config serverless.infra.yml --stage dev | sed -n '1,200p'
+  deploy-infra:
+    name: Deploy Infra (dev)
+    needs: setup-aws
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write      # pour l'OIDC vers AWS
+      contents: read
+
+    steps:
+      # - name: Debug - config Serverless compilée
+      #   working-directory: .
+      #   env:
+      #     SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      #   run: |
+      #     npx serverless print --config serverless.infra.yml --stage dev | sed -n '1,200p'
 
       - name: Deploy Infra (dev)
         working-directory: .
@@ -90,6 +108,18 @@ jobs:
         run: |
           npx serverless deploy --config serverless.infra.yml --stage dev
 
+  deploy-api:
+    name: Deploy API (dev)
+    needs: setup-aws
+    # Ne déploie que sur la branche principale, et seulement sur les push (pas PR)
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write      # pour l'OIDC vers AWS
+      contents: read
+
+    steps:
       - name: Deploy API (dev)
         working-directory: .
         env:
@@ -97,6 +127,16 @@ jobs:
         run: |
           npx serverless deploy --config serverless.api.yml --stage dev
 
+  integration-tests:
+    name: Integration tests (dev)
+    needs: deploy-api
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write      # pour l'OIDC vers AWS
+      contents: read
+
+    steps:
       - name: Run integration tests
         working-directory: ./backend
         run: |

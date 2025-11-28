@@ -1,5 +1,5 @@
 import { updatePasswordCore } from "../dal/updatePasswordCore.js"
-import { json } from "../helpers/json.js";
+import { json } from "../helpers/toolbox.js";
 
 import { sendUpdateToDb } from "../dal/requestToDb.js";
 

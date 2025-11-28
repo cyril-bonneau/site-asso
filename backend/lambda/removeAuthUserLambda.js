@@ -1,5 +1,5 @@
 import { checkPasswordByUserId } from "../dal/checkPasswordByUserId.js";
-import { json } from "../helpers/json.js";
+import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;

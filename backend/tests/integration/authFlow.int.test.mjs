@@ -209,9 +209,4 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(profileAfterDelete).toBeUndefined();
     });
 
-    // Optionnel : cleanup défensif
-    afterAll(async () => {
-        // Si tu veux ajouter une tentative de cleanup même si certains tests échouent,
-        // tu peux refaire un call DELETE ici en entourant de try/catch.
-    });
 });

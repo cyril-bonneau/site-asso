@@ -93,6 +93,11 @@ resources:
           AttributeName: TTL
           Enabled: true
 
+    EventBusSiteAssoRegister:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: site-asso-event-bus-register-${sls:stage}
+
   Outputs:
 
     DdbUserTable:
@@ -125,3 +130,12 @@ resources:
       Value: !GetAtt RateLimitTable.Arn
       Export:
         Name: site-asso-infra-${sls:stage}-DdbRateLimitTableArn
+
+    RegisterEventBusName:
+      Value: !Ref EventBusSiteAssoRegister
+      Export:
+        Name: site-asso-infra-${sls:stage}-RegisterEventBusName
+    RegisterEventBusArn:
+      Value: !GetAtt EventBusSiteAssoRegister.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-RegisterEventBusArn
