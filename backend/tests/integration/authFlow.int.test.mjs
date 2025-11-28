@@ -25,6 +25,8 @@ describe("Parcours complet Auth (intégration)", () => {
         const body = {
             email: TEST_EMAIL,
             password: TEST_PASSWORD,
+            firstName: TEST_FIRSTNAME,
+            lastName: TEST_LASTNAME,
         }
 
         const payload = await client.send(
