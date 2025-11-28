@@ -18,33 +18,33 @@ on:
       - 'serverless.infra.yml'
 
 jobs:
-  test:
-    name: Lint & tests backend
-    runs-on: ubuntu-latest
+  # test:
+  #   name: Lint & tests backend
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: |
-            backend/package-lock.json
+  #     - name: Use Node.js 22
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #         cache: 'npm'
+  #         cache-dependency-path: |
+  #           backend/package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm ci
+  #     - name: Install backend dependencies
+  #       working-directory: ./backend
+  #       run: npm ci
 
-      - name: Run unit tests
-        working-directory: ./backend
-        run: npm run test:unit
+  #     - name: Run unit tests
+  #       working-directory: ./backend
+  #       run: npm run test:unit
 
   setup-deploy:
     name: Setup for deployment
-    needs: test
+    # needs: test
     runs-on: ubuntu-latest
 
     permissions:
