@@ -90,7 +90,7 @@ jobs:
 
   deploy-api:
     name: Deploy API (dev)
-    needs: setup-aws
+    # needs: setup-aws
     # Ne déploie que sur la branche principale, et seulement sur les push (pas PR)
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
