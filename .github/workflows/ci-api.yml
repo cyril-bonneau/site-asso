@@ -42,34 +42,34 @@ jobs:
   #       working-directory: ./backend
   #       run: npm run test:unit
 
-  setup-deploy:
-    name: Setup for deployment
-    # needs: test
-    runs-on: ubuntu-latest
+  # setup-deploy:
+  #   name: Setup for deployment
+  #   # needs: test
+  #   runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write      # pour l'OIDC vers AWS
-      contents: read
+  #   permissions:
+  #     id-token: write      # pour l'OIDC vers AWS
+  #     contents: read
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: |
-            backend/package-lock.json
+  #     - name: Use Node.js 22
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #         cache: 'npm'
+  #         cache-dependency-path: |
+  #           backend/package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm ci
+  #     - name: Install backend dependencies
+  #       working-directory: ./backend
+  #       run: npm ci
 
   setup-aws:
     name: Setup AWS credentials
-    needs: setup-deploy
+    # needs: setup-deploy
     runs-on: ubuntu-latest
 
     permissions:
@@ -94,6 +94,21 @@ jobs:
       contents: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
       # - name: Debug - config Serverless compilée
       #   working-directory: .
       #   env:
@@ -120,6 +135,21 @@ jobs:
       contents: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
       - name: Deploy API (dev)
         working-directory: .
         env:
@@ -137,6 +167,21 @@ jobs:
       contents: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+        
       - name: Run integration tests
         working-directory: ./backend
         run: |
