@@ -21,7 +21,7 @@ provider:
     # Récupère la table depuis la stack infra (via Outputs)
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
-    AWS_REGION: ${self:provider.region}
+    PROJECT_AWS_REGION: ${self:provider.region}
 
 plugins:
   - ./backend/node_modules/serverless-esbuild

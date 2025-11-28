@@ -1,5 +1,5 @@
 import { EventBridgeClient, PutEventsCommand } from "@aws-sdk/client-eventbridge";
-const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION });
+const eventBridge = new EventBridgeClient({ region: process.env.PROJECT_AWS_REGION || "eu-west-3" });
 
 export async function eventBridgePutEvents(eventEntry) {
 
