@@ -155,6 +155,13 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-3
+          role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
+          role-session-name: site-asso-ci
+
       - name: Run integration tests
         working-directory: ./backend
         run: |
