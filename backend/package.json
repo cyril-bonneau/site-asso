@@ -34,11 +34,10 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@cyclonedx/cyclonedx-npm": "^4.0.1",
     "@vitest/coverage-v8": "^4.0.8",
     "nodemon": "^3.1.10",
     "serverless": "^4.20.2",
-    "serverless-esbuild": "^1.55.1",
+    "serverless-esbuild": "^1.56.1",
     "serverless-iam-roles-per-function": "^3.2.0",
     "vitest": "^4.0.8"
   },
