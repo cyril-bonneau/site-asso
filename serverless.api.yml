@@ -209,7 +209,7 @@ functions:
       USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     events:
       - eventBridge:
-          eventBus: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusName}
+          eventBus: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusArn}
           pattern:
             source:
               - site-asso.auth.register
