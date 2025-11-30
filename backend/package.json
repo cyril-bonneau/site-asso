@@ -20,11 +20,9 @@
     "@aws-sdk/client-lambda": "^3.940.0",
     "@aws-sdk/lib-dynamodb": "^3.902.0",
     "argon2": "^0.44.0",
-    "better-sqlite3": "^12.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "cross-env": "^10.1.0",
-    "dotenv": "17.2.2",
     "express": "^5.1.0",
     "jose": "^6.1.0",
     "nanoid": "^5.1.6",
@@ -38,7 +36,6 @@
     "nodemon": "^3.1.10",
     "serverless": "^4.20.2",
     "serverless-esbuild": "^1.56.1",
-    "serverless-iam-roles-per-function": "^3.2.0",
     "vitest": "^4.0.8"
   },
   "overrides": {

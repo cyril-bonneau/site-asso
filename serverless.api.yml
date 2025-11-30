@@ -28,11 +28,14 @@ plugins:
 
 custom:
   esbuild:
+    exclude: 
+      - '@aws-sdk/*'
     bundle: true
     platform: node
     target: node22
     format: esm            # <-- clé : passe en ESM
     sourcemap: true
+    incremental: true
     minify: false
     external: []           # bundle tout (évite les “missing module”)
     mainFields:
