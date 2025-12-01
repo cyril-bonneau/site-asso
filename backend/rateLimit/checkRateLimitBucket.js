@@ -78,7 +78,7 @@ export function createCheckRateLimitBucket({ ddb = getDefaultDdb() } = {}) {
         // ───────────── Mode TOKEN BUCKET (refill continu) ─────────────
         let item = null;
         try {
-            item = await loadBucket({ ddb, tableName: table, pk });
+            item = await loadBucket({ tableName: table, pk });
             debug("Item actuel (token-bucket)", item);
         } catch (e) {
             warn("Erreur Get rate-limit (token-bucket)", e);
@@ -101,7 +101,6 @@ export function createCheckRateLimitBucket({ ddb = getDefaultDdb() } = {}) {
 
         try {
             await saveBucket({
-                ddb,
                 tableName: table,
                 pk,
                 tokens: newTokens,

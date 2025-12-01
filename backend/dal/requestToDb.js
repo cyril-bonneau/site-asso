@@ -7,8 +7,9 @@ import {
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+export const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     marshallOptions: { removeUndefinedValues: true },
+    unmarshallOptions: { wrapNumbers: false, },
 });
 
 export async function sendTransactToDb(transactItems, CancellationReasons) {
@@ -28,8 +29,7 @@ export async function sendTransactToDb(transactItems, CancellationReasons) {
 
 export async function getFromDb(getRequest) {
     try {
-        const { Item } = await ddb.send(new GetCommand(getRequest))
-        return Item
+        return { Item } = await ddb.send(new GetCommand(getRequest))
     } catch (err) {
         console.log("error while getting data", err)
         throw err

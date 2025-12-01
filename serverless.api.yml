@@ -16,7 +16,7 @@ provider:
   #     burstLimit: 50 #pics max
   #     rateLimit: 25 #req/s
   environment:
-    NODE_OPTIONS: '--enable-source-maps'
+    NODE_OPTIONS: '--enable-source-maps' # Pour activer les sourcemaps dans CloudWatch Logs à retirer dans la prod
     RUNTIME: 'lambda'
     # Récupère la table depuis la stack infra (via Outputs)
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
@@ -28,8 +28,6 @@ plugins:
 
 custom:
   esbuild:
-    exclude: 
-      - '@aws-sdk/*'
     bundle: true
     platform: node
     target: node22
@@ -45,39 +43,40 @@ custom:
 
 functions:
 
-  addUser:
-    handler: backend/lambda/addUserLambda.handler
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:PutItem
-        Resource:
-          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-    events:
-      - httpApi: 
-          method: PUT
-          path: /addUser
+  # addUser:
+  #   handler: backend/lambda/addUserLambda.handler
+  #   iamRoleStatements:
+  #     - Effect: Allow
+  #       Action:
+  #         - dynamodb:PutItem
+  #       Resource:
+  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
+  #   events:
+  #     - httpApi: 
+  #         method: PUT
+  #         path: /addUser
 
-  getUser:
-    handler: backend/lambda/getUserLambda.handler
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:GetItem
-        Resource:
-          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-    events:
-      - httpApi: 
-          method: GET
-          path: /getUser
+  # getUser:
+  #   handler: backend/lambda/getUserLambda.handler
+  #   iamRoleStatements:
+  #     - Effect: Allow
+  #       Action:
+  #         - dynamodb:GetItem
+  #       Resource:
+  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
+  #   events:
+  #     - httpApi: 
+  #         method: GET
+  #         path: /getUser
 
   registerUser:
     handler: backend/lambda/registerUserLambda.handler
     # reservedConcurrency: 5
     memorySize: 1024
     architecture: arm64
+    provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
@@ -109,6 +108,7 @@ functions:
     handler: backend/lambda/logInAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
+    provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
@@ -204,8 +204,8 @@ functions:
           
   onRegisterAuth: #Ajout de nouveau user dans la table générale des users
     handler: backend/lambda/onRegisterAuthLambda.handler
-    architecture: arm64           # ARM64 conseillé
     memorySize: 1024              # 1024–1536 Mo pour marge CPU
+    architecture: arm64           # ARM64 conseillé
     timeout: 30
     environment:
       USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
@@ -321,9 +321,5 @@ resources:
 
 package:
   patterns:
-    - backend/**
-    - backend/lambda/**
-    - '!**/.git/**'
-    - '!**/.vscode/**'
-    - '!**/*.map'
+    - '!backend/tests/**'
 

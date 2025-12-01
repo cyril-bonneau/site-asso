@@ -22,10 +22,7 @@ describe("rateLimitStorageDdb", () => {
             return { Item: fakeItem };
         });
 
-        const fakeDdb = { send };
-
         const item = await loadBucket({
-            ddb: fakeDdb,
             tableName: "RateLimitTable",
             pk: "RL#SCOPE#KEY"
         });
@@ -40,10 +37,7 @@ describe("rateLimitStorageDdb", () => {
             return {};
         });
 
-        const fakeDdb = { send };
-
         const item = await loadBucket({
-            ddb: fakeDdb,
             tableName: "RateLimitTable",
             pk: "RL#SCOPE#KEY"
         });
@@ -60,10 +54,7 @@ describe("rateLimitStorageDdb", () => {
             return {};
         });
 
-        const fakeDdb = { send };
-
         await saveBucket({
-            ddb: fakeDdb,
             tableName: "RateLimitTable",
             pk: "RL#SCOPE#KEY",
             tokens: 7,
