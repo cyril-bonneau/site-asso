@@ -16,7 +16,7 @@ provider:
   #     burstLimit: 50 #pics max
   #     rateLimit: 25 #req/s
   environment:
-    NODE_OPTIONS: '--enable-source-maps' # Pour activer les sourcemaps dans CloudWatch Logs à retirer dans la prod
+    # NODE_OPTIONS: '--enable-source-maps' # Pour activer les sourcemaps dans CloudWatch Logs à retirer dans la prod
     RUNTIME: 'lambda'
     # Récupère la table depuis la stack infra (via Outputs)
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}

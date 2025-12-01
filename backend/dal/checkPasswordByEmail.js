@@ -1,16 +1,11 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
-    DynamoDBDocumentClient,
     QueryCommand
 } from "@aws-sdk/lib-dynamodb";
+import { ddb } from "./requestToDb.js";
 
 import { verifyPassword } from "../auth/auth.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
 
 export async function checkPasswordByEmail({ password, email }) {
     const auth = await getAuthByEmail(email)
