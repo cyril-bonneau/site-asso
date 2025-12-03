@@ -31,7 +31,7 @@ custom:
     bundle: true
     platform: node
     target: node22
-    format: esm            # <-- clé : passe en ESM
+    format: cjs            
     sourcemap: true
     minify: false
     external: []           # bundle tout (évite les “missing module”)
