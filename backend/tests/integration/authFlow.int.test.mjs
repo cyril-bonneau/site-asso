@@ -14,7 +14,7 @@ const TEST_NEW_EMAIL = `cyril.bonneau2${timestamp}@outlook.com`;
 const TEST_PASSWORD = "Ax9!qL7#vZ3@pT2";
 const TEST_NEW_PASSWORD = "Hy4&nK8@wS6?dR1";
 const TEST_FIRSTNAME = "Jack";
-const TEST_LASTNAME = "Larnaqueazedsqs";
+const TEST_LASTNAME = "Larnaque";
 
 let userId;
 
