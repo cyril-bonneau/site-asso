@@ -24,22 +24,22 @@ provider:
     PROJECT_AWS_REGION: ${self:provider.region}
 
 plugins:
-  - ./backend/node_modules/serverless-esbuild
+  # - ./backend/node_modules/serverless-esbuild
 
-custom:
-  esbuild:
-    bundle: true
-    platform: node
-    target: node22
-    format: cjs            
-    sourcemap: true
-    minify: false
-    external: []           # bundle tout (évite les “missing module”)
-    mainFields:
-      - module
-      - main
-    banner:
-      js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
+# custom:
+#   esbuild:
+#     bundle: true
+#     platform: node
+#     target: node22
+#     format: cjs            
+#     sourcemap: true
+#     minify: false
+#     external: []           # bundle tout (évite les “missing module”)
+#     mainFields:
+#       - module
+#       - main
+#     banner:
+#       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
 
