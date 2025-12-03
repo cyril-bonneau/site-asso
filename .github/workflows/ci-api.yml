@@ -59,11 +59,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Serverless build
-        uses: actions/cache@v4
-        with:
-          path: .serverless
-          key: ${{ runner.os }}-serverless-${{ hashFiles('serverless.infra.yml', 'serverless.api.yml') }}
+      # - name: Cache Serverless build
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: .serverless
+      #     key: ${{ runner.os }}-serverless-${{ hashFiles('serverless.infra.yml', 'serverless.api.yml') }}
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
@@ -113,11 +113,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Serverless build
-        uses: actions/cache@v4
-        with:
-          path: .serverless
-          key: ${{ runner.os }}-serverless-${{ hashFiles('serverless.infra.yml', 'serverless.api.yml') }}
+      # - name: Cache Serverless build
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: .serverless
+      #     key: ${{ runner.os }}-serverless-${{ hashFiles('serverless.infra.yml', 'serverless.api.yml') }}
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
