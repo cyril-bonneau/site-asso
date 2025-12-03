@@ -76,7 +76,7 @@ functions:
     # reservedConcurrency: 5
     memorySize: 1024
     architecture: arm64
-    provisionedConcurrency: 1
+    # provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
@@ -108,7 +108,7 @@ functions:
     handler: backend/lambda/logInAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
-    provisionedConcurrency: 1
+    # provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
