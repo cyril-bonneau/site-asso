@@ -31,7 +31,7 @@ custom:
     bundle: true
     platform: node
     target: node22
-    format: esm            
+    format: cjs            
     sourcemap: true
     minify: false
     external: []           # bundle tout (évite les “missing module”)
@@ -322,6 +322,4 @@ resources:
 package:
   patterns:
     - '!backend/tests/**'
-    - 'package.json'
-    - 'backend/package.json'
 
