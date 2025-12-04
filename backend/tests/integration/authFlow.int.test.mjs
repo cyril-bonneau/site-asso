@@ -46,6 +46,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.message).toBe("user successfully created");
 
         userId = response.body.userId;
+        console.log("Created userId:", userId);
 
         await new Promise(resolve => setTimeout(resolve, 3000));
         const profileAfterCreation = await getUserProfileByUserId(userId);

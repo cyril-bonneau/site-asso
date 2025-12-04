@@ -1,14 +1,9 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { ddb } from "../../dal/requestToDb.js";
 import {
-    DynamoDBDocumentClient,
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
 const USER_TABLE = "site-asso-dev-asso-main";
-
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
-    marshallOptions: { removeUndefinedValues: true },
-});
 
 export async function getUserProfileByUserId(userId) {
     try {
