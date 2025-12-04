@@ -36,7 +36,7 @@ async function getAuthByEmail(email) {
                 ExpressionAttributeValues: {
                     ":pk": `EMAIL#${email}`,
                 },
-                ProjectionExpression: "passwordHash, userId, role",
+                ProjectionExpression: "passwordHash, userId, roles",
             })
         )
         console.log("getAuthByEmail result:", res.Items[0]);

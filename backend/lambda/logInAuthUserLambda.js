@@ -38,14 +38,14 @@ async function loginCore({ email, password }) {
 
     try {
 
-        const { check, userId = undefined, role = undefined } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
+        const { check, userId = undefined, roles = undefined } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
 
-        console.log("role", role)
+        console.log("roles", roles)
         if (!check) {
             return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
         }
 
-        const payload = { userId, email: normalizeEmail(email), role };
+        const payload = { userId, email: normalizeEmail(email), roles };
         const accessToken = await signAccessTokenWithKms(payload);
 
         return json(200, {
