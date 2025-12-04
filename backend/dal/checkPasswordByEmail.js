@@ -63,7 +63,7 @@ async function getPrivilegeByUserId(userId) {
             })
         )
         console.log("getPrivilegeByUserId result:", res.Items[0]);
-        return res.Items[0]?.privilege
+        return res.Items.privilege
     } catch (err) {
         return err
     }
