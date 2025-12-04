@@ -7,6 +7,7 @@ import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
+import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
@@ -58,6 +59,11 @@ async function registerUserCore(event) {
         } else if (res.statusCode !== 201) {
             return json(res.statusCode || 500, { ok: false, message: res.error || "INTERNAL_ERROR" })
         }
+
+        const payload = { userId: JSON.parse(res.body).userId, email, role };
+        const accessToken = await signAccessTokenWithKms(payload);
+
+        res.accessToken = accessToken;
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, role });
@@ -130,6 +136,7 @@ async function createAuthEntry(email, password) {
             await sendTransactToDb(transaction, true);
 
             console.log("createAuthEntry success", { email: email, userId: id })
+
             return json(201, {
                 ok: true,
                 userId: id,

@@ -2,6 +2,7 @@ import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
 import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
+import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 
 export const handler = withRateLimit(handlerCore, {
     scope: "login",
@@ -44,11 +45,14 @@ async function loginCore({ email, password }) {
             return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
         }
 
+        const payload = { userId, email: normalizeEmail(email), role };
+        const accessToken = await signAccessTokenWithKms(payload);
+
         return json(200, {
             ok: true,
             userId: userId,
             message: "LOGGED_IN",
-            // accessToken,
+            accessToken,
             // refreshToken,
             // userId,
         });
