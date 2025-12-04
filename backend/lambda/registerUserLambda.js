@@ -50,7 +50,7 @@ async function registerUserCore(event) {
             };
         }
 
-        const roles = ["USER"];
+        const privilege = ["USER"];
 
         const res = await createAuthEntry(email, password);
 
@@ -60,13 +60,13 @@ async function registerUserCore(event) {
             return json(res.statusCode || 500, { ok: false, message: res.error || "INTERNAL_ERROR" })
         }
 
-        const payload = { userId: JSON.parse(res.body).userId, email, roles };
+        const payload = { userId: JSON.parse(res.body).userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
         res.accessToken = accessToken;
 
         // il est attendu au minimum userId, email, firstName, lastName
-        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, roles });
+        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, privilege });
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
@@ -177,13 +177,13 @@ async function createAuthEntry(email, password) {
     }
 }
 
-function buildUserRegisterDetail({ userId, email, firstName, lastName, roles }) {
+function buildUserRegisterDetail({ userId, email, firstName, lastName, privilege }) {
     return {
         userId: userId,
         email: email,
         firstName: firstName,
         lastName: lastName,
-        roles: roles
+        privilege: privilege
     }
 }
 

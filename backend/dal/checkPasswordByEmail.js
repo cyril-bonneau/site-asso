@@ -9,6 +9,7 @@ const AUTH_TABLE = process.env.AUTH_TABLE;
 
 export async function checkPasswordByEmail({ password, email }) {
     const auth = await getAuthByEmail(email)
+    console.log("checkPasswordByEmail auth:", auth);
 
     if (!auth || !auth.passwordHash) {
         throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
@@ -36,7 +37,7 @@ async function getAuthByEmail(email) {
                 ExpressionAttributeValues: {
                     ":pk": `EMAIL#${email}`,
                 },
-                ProjectionExpression: "passwordHash, userId, roles",
+                ProjectionExpression: "passwordHash, userId, privilege",
             })
         )
         console.log("getAuthByEmail result:", res.Items[0]);
