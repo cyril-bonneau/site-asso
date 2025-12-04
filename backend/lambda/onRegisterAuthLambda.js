@@ -24,14 +24,14 @@ export const handler = async (event) => {
             throw new Error("onRegisterAuthStream: événement inattendu");
         }
 
-        const { userId, email, firstName, lastName } = event.detail;
+        const { userId, email, firstName, lastName, privilege } = event.detail;
 
-        if (!email || !userId || !firstName || !lastName) {
+        if (!email || !userId || !firstName || !lastName || !privilege) {
             console.error("onRegisterAuthStream: info manquante dans l'événement", { eventDetail: event.detail });
             throw new Error("onRegisterAuthStream: info manquante dans l'événement");
         }
 
-        await createUserWithUniqueEmail({ email, firstName, lastName, userId });
+        await createUserWithUniqueEmail({ email, firstName, lastName, userId, privilege });
 
     } catch (err) {
         if (err?.name === "ConditionalCheckFailedException") {
@@ -51,7 +51,7 @@ export const handler = async (event) => {
     }
 };
 
-async function createUserWithUniqueEmail({ email, firstName, lastName, userId } = {}) {
+async function createUserWithUniqueEmail({ email, firstName, lastName, userId, privilege } = {}) {
     const now = isoNow();
 
     const emailLockItem = {
@@ -70,6 +70,7 @@ async function createUserWithUniqueEmail({ email, firstName, lastName, userId } 
         email: email,
         firstName: firstName,
         lastName: lastName,
+        privilege: privilege,
         createdAt: now,
         updatedAt: now,
     };
