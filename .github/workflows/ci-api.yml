@@ -47,8 +47,9 @@ jobs:
   #       run: npm run test:unit
 
   deploy-infra:
-    name: Deploy Infra (dev)
+    name: Deploy Infra
     # needs: setup-aws
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -58,6 +59,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set STAGE from branch
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $BRANCH"
+
+          if [ "$BRANCH" = "master" ]; then
+            echo "STAGE=prod" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "dev" ]; then
+            echo "STAGE=dev" >> $GITHUB_ENV
+          else
+            # feature/*
+            echo "STAGE=sandbox" >> $GITHUB_ENV
+          fi
 
       - name: Cache Serverless build
         uses: actions/cache@v4
@@ -89,20 +104,19 @@ jobs:
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
         run: |
-          npx serverless print --config serverless.infra.yml --stage dev | sed -n '1,200p'
+          npx serverless print --config serverless.infra.yml --stage $STAGE | sed -n '1,200p'
 
-      - name: Deploy Infra (dev)
+      - name: Deploy Infra
         working-directory: .
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
         run: |
-          npx serverless deploy --config serverless.infra.yml --stage dev
+          npx serverless deploy --config serverless.infra.yml --stage $STAGE
 
   deploy-api:
-    name: Deploy API (dev)
+    name: Deploy API
     needs: deploy-infra
-    # Ne déploie que sur la branche principale, et seulement sur les push (pas PR)
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -112,6 +126,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set STAGE from branch
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $BRANCH"
+
+          if [ "$BRANCH" = "master" ]; then
+            echo "STAGE=prod" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "dev" ]; then
+            echo "STAGE=dev" >> $GITHUB_ENV
+          else
+            # feature/*
+            echo "STAGE=sandbox" >> $GITHUB_ENV
+          fi
 
       - name: Cache Serverless build
         uses: actions/cache@v4
@@ -138,15 +166,15 @@ jobs:
           role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
           role-session-name: site-asso-ci
 
-      - name: Deploy API (dev)
+      - name: Deploy API
         working-directory: .
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
         run: |
-          npx serverless deploy --config serverless.api.yml --stage dev
+          npx serverless deploy --config serverless.api.yml --stage $STAGE
 
   integration-tests:
-    name: Integration tests (dev)
+    name: Integration tests
     needs: 
       - deploy-api
     runs-on: ubuntu-latest
@@ -158,6 +186,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set STAGE from branch
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $BRANCH"
+
+          if [ "$BRANCH" = "master" ]; then
+            echo "STAGE=prod" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "dev" ]; then
+            echo "STAGE=dev" >> $GITHUB_ENV
+          else
+            # feature/*
+            echo "STAGE=sandbox" >> $GITHUB_ENV
+          fi
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
