@@ -1,4 +1,4 @@
-import { KMSClient, signCommand } from "@aws-sdk/client-kms";
+import { KMSClient, SignCommand } from "@aws-sdk/client-kms";
 import { toBase64Url } from "../helpers/toolbox.js";
 
 const region = process.env.AWS_REGION || "eu-west-3";
@@ -31,7 +31,7 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
     const dataToSign = Buffer.from(`${headerB64}.${payloadB64}`);
 
     const signRes = await kms.send(
-        new signCommand({
+        new SignCommand({
             KeyId: keyId,
             Message: dataToSign,
             MessageType: "RAW",
