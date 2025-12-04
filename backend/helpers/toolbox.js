@@ -21,3 +21,11 @@ export function json(statusCode, body) {
         body: JSON.stringify(body),
     };
 }
+
+export function toBase64Url(buffer) {
+    return Buffer.from(buffer)
+        .toString("base64")
+        .replace(/=/g, "")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_");
+}
