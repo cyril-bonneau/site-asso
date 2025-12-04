@@ -3,7 +3,7 @@ import {
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
-const USER_TABLE = "site-asso-dev-asso-main";
+const USER_TABLE = `site-asso-${process.env.STAGE}-asso-main`;
 
 export async function getUserProfileByUserId(userId) {
     try {

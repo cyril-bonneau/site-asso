@@ -10,7 +10,6 @@ if (!stage) {
     process.exit(1);
 }
 
-// alias créé dans infra.yml : alias/site-asso-auth-${sls:stage}
 const kmsKeyId = `alias/site-asso-auth-${stage}`;
 const ssmParamName = `/site-asso/${stage}/cfg/jwtAccessPub`;
 
