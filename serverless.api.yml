@@ -130,6 +130,12 @@ functions:
 
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
           - kms:Sign
         Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
       
