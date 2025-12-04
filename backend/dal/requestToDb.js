@@ -29,7 +29,9 @@ export async function sendTransactToDb(transactItems, CancellationReasons) {
 
 export async function getFromDb(getRequest) {
     try {
-        return { Item } = await ddb.send(new GetCommand(getRequest))
+        const res = await ddb.send(new GetCommand(getRequest))
+        console.log("getFromDb result", res)
+        return res.Item
     } catch (err) {
         console.log("error while getting data", err)
         throw err
