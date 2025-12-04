@@ -31,7 +31,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-registerUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-registerUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -65,7 +65,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-loginUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -96,7 +96,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-updateAuthUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
                     body: JSON.stringify(body)
@@ -132,7 +132,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         let payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-updateAuthUserPassword",
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUserPassword`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
                     body: JSON.stringify(body)
@@ -154,7 +154,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-loginUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -175,7 +175,7 @@ describe("Parcours complet Auth (intégration)", () => {
         // le nouveau fonctionne
         payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-loginUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -199,7 +199,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-removeAuthUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
                     body: JSON.stringify(body)
