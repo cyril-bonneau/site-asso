@@ -93,7 +93,7 @@ functions:
       - Effect: Allow
         Action:
           - kms:Sign
-        Resource: arn:aws:kms:${self:provider.region}:011664843444:alias/site-asso-auth-${sls:stage}
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
 
       - Effect: Allow
         Action:
@@ -131,7 +131,7 @@ functions:
       - Effect: Allow
         Action:
           - kms:Sign
-        Resource: arn:aws:kms:${self:provider.region}:011664843444:alias/site-asso-auth-${sls:stage}
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
       
       - Effect: Allow
         Action:

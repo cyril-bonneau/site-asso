@@ -171,3 +171,8 @@ resources:
       Value: !GetAtt EventBusSiteAssoRegister.Arn
       Export:
         Name: site-asso-infra-${sls:stage}-RegisterEventBusArn
+
+    KmsJwtSigningKeyArn:
+    Value: !GetAtt KmsJwtSigningKey.Arn
+    Export:
+      Name: site-asso-infra-${sls:stage}-KmsJwtSigningKey
