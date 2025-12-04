@@ -65,16 +65,6 @@ resources:
                 - userId
                 - createdAt
 
-          - IndexName: GSI1v4
-            KeySchema:
-              - { AttributeName: GSI1PK, KeyType: HASH }
-              - { AttributeName: GSI1SK, KeyType: RANGE }
-            Projection:
-              ProjectionType: INCLUDE
-              NonKeyAttributes:
-                - passwordHash
-                - userId
-
           - IndexName: GSI1v5
             KeySchema:
               - { AttributeName: GSI1PK, KeyType: HASH }

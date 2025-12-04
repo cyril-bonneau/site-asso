@@ -18,7 +18,6 @@ provider:
   environment:
     # NODE_OPTIONS: '--enable-source-maps' # Pour activer les sourcemaps dans CloudWatch Logs à retirer dans la prod
     RUNTIME: 'lambda'
-    # Récupère la table depuis la stack infra (via Outputs)
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
     PROJECT_AWS_REGION: ${self:provider.region}
@@ -34,7 +33,7 @@ plugins:
 #     format: cjs            
 #     sourcemap: true
 #     minify: false
-#     external: []           # bundle tout (évite les “missing module”)
+#     external: []
 #     mainFields:
 #       - module
 #       - main

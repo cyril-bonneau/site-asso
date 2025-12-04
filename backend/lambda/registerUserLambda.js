@@ -49,6 +49,8 @@ async function registerUserCore(event) {
             };
         }
 
+        const role = "USER";
+
         const res = await createAuthEntry(email, password);
 
         if (res.error === "EMAIL_ALREADY_EXISTS") {
@@ -58,7 +60,7 @@ async function registerUserCore(event) {
         }
 
         // il est attendu au minimum userId, email, firstName, lastName
-        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId });
+        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, role });
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
@@ -168,12 +170,13 @@ async function createAuthEntry(email, password) {
     }
 }
 
-function buildUserRegisterDetail({ userId, email, firstName, lastName }) {
+function buildUserRegisterDetail({ userId, email, firstName, lastName, role }) {
     return {
         userId: userId,
         email: email,
         firstName: firstName,
         lastName: lastName,
+        role: role
     }
 }
 
