@@ -32,7 +32,7 @@ async function getAuthByEmail(email) {
         const res = await ddb.send(
             new QueryCommand({
                 TableName: AUTH_TABLE,
-                IndexName: "GSI1v5",
+                IndexName: "GSI1v6",
                 KeyConditionExpression: "GSI1PK = :pk",
                 ExpressionAttributeValues: {
                     ":pk": `EMAIL#${email}`,
