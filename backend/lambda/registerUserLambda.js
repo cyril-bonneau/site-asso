@@ -32,6 +32,7 @@ async function registerUserCore(event) {
 
         const email = normalizeEmail(data?.email)
         const { password, firstName, lastName } = data ?? {}
+        const privilege = ["USER"];
 
         if (!email || !password || !firstName || !lastName) {
             return json(400, { ok: false, message: "MISSING_REQUIRED_INFO" })
@@ -50,8 +51,6 @@ async function registerUserCore(event) {
             };
         }
 
-        const privilege = ["USER"];
-
         const res = await createAuthEntry(email, password);
 
         if (res.error === "EMAIL_ALREADY_EXISTS") {
@@ -63,15 +62,18 @@ async function registerUserCore(event) {
         const payload = { userId: JSON.parse(res.body).userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
-        JSON.parse(res.body).accessToken = accessToken;
-
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, privilege });
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
         if (!resultEvent.FailedEntryCount) {
-            return res;
+            return json(201, {
+                ok: true,
+                userId: res.userId,
+                accessToken: accessToken,
+                message: res.message
+            });;
         }
 
         console.error("registerUserCore: eventBridgePutEvents failed", {
@@ -137,11 +139,10 @@ async function createAuthEntry(email, password) {
 
             console.log("createAuthEntry success", { email: email, userId: id })
 
-            return json(201, {
-                ok: true,
+            return {
                 userId: id,
                 message: "user successfully created"
-            });
+            }
 
         } catch (err) {
 
