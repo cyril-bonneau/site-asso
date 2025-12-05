@@ -59,11 +59,11 @@ async function registerUserCore(event) {
             return json(res.statusCode || 500, { ok: false, message: res.error || "INTERNAL_ERROR" })
         }
 
-        const payload = { userId: JSON.parse(res.body).userId, email, privilege };
+        const payload = { userId: res.userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
         // il est attendu au minimum userId, email, firstName, lastName
-        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, privilege });
+        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: res.userId, privilege });
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
@@ -140,6 +140,7 @@ async function createAuthEntry(email, password) {
             console.log("createAuthEntry success", { email: email, userId: id })
 
             return {
+                statusCode: 201,
                 userId: id,
                 message: "user successfully created"
             }
