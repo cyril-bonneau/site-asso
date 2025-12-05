@@ -63,7 +63,7 @@ async function registerUserCore(event) {
         const payload = { userId: JSON.parse(res.body).userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
-        res.accessToken = accessToken;
+        res.body.accessToken = accessToken;
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: JSON.parse(res.body).userId, privilege });

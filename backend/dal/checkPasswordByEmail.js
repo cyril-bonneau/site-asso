@@ -11,7 +11,6 @@ const USER_TABLE = process.env.USER_TABLE;
 
 export async function checkPasswordByEmail({ password, email }) {
     const auth = await getAuthByEmail(email)
-    console.log("checkPasswordByEmail auth:", auth);
 
     if (!auth || !auth.passwordHash) {
         throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
