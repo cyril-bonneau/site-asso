@@ -48,6 +48,8 @@ async function loginCore({ email, password }) {
         const payload = { userId, email: normalizeEmail(email), privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
+        console.log("accessToken", accessToken)
+
         return json(200, {
             ok: true,
             userId: userId,
