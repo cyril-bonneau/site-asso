@@ -31,7 +31,14 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
     const payloadB64 = toBase64Url(Buffer.from(JSON.stringify(payloadFinal)));
     const dataToSign = Buffer.from(`${headerB64}.${payloadB64}`);
 
-    const signRes = signAccessToken(dataToSign);
+    const signRes = await kms.send(
+        new SignCommand({
+            KeyId: keyId,
+            Message: dataToSign,
+            MessageType: "RAW",
+            SigningAlgorithm: "RSASSA_PSS_SHA_256",
+        })
+    );
 
     if (!signRes.Signature) {
         throw new Error("KMS_SIGNING_FAILED");

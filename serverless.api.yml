@@ -41,35 +41,6 @@ plugins:
 #       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
-
-  # addUser:
-  #   handler: backend/lambda/addUserLambda.handler
-  #   iamRoleStatements:
-  #     - Effect: Allow
-  #       Action:
-  #         - dynamodb:PutItem
-  #       Resource:
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-  #   events:
-  #     - httpApi: 
-  #         method: PUT
-  #         path: /addUser
-
-  # getUser:
-  #   handler: backend/lambda/getUserLambda.handler
-  #   iamRoleStatements:
-  #     - Effect: Allow
-  #       Action:
-  #         - dynamodb:GetItem
-  #       Resource:
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-  #   events:
-  #     - httpApi: 
-  #         method: GET
-  #         path: /getUser
-
   registerUser:
     handler: backend/lambda/registerUserLambda.handler
     memorySize: 1024
@@ -112,7 +83,6 @@ functions:
     handler: backend/lambda/logInAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
-    # provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
