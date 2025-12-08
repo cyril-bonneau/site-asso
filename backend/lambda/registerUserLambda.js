@@ -9,6 +9,7 @@ import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
+const STAGE = process.env.STAGE;
 
 const client = new LambdaClient({ region: process.env.AWS_REGION });
 
@@ -63,7 +64,7 @@ async function registerUserCore(event) {
 
         const rawGenResult = await client.send(
             new InvokeCommand({
-                FunctionName: `site-asso-api-${process.env.STAGE}-accessTokenGenerator`,
+                FunctionName: `site-asso-api-${STAGE}-accessTokenGenerator`,
                 Payload: Buffer.from(JSON.stringify({ payload })),
             })
         );

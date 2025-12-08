@@ -5,6 +5,8 @@ import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { decode } from "../helpers/toolbox.js";
 
+const STAGE = process.env.STAGE;
+
 const client = new LambdaClient({ region: process.env.AWS_REGION });
 
 export const handler = withRateLimit(handlerCore, {
@@ -52,7 +54,7 @@ async function loginCore({ email, password }) {
 
         const rawGenResult = await client.send(
             new InvokeCommand({
-                FunctionName: `site-asso-api-${process.env.STAGE}-accessTokenGenerator`,
+                FunctionName: `site-asso-api-${STAGE}-accessTokenGenerator`,
                 Payload: Buffer.from(JSON.stringify({ payload })),
             })
         );
