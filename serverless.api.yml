@@ -72,17 +72,14 @@ functions:
 
   registerUser:
     handler: backend/lambda/registerUserLambda.handler
-    # reservedConcurrency: 5
     memorySize: 1024
     architecture: arm64
-    # provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
       REGISTER_EVENT_BUS: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusName}
       JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
       KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
-      STAGE: ${sls:stage}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -106,12 +103,6 @@ functions:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
-
-      - Effect: Allow
-        Action:
-          - lambda:InvokeFunction
-        Resource: 
-          - arn:aws:lambda:${self:provider.region}:${aws:accountId}:function:site-asso-api-${sls:stage}-accessTokenGenerator
     events:
       - httpApi: 
           method: PUT
@@ -127,7 +118,6 @@ functions:
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
       JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
       KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
-      STAGE: ${sls:stage}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -141,18 +131,17 @@ functions:
           - dynamodb:GetItem
         Resource: 
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - kms:Sign
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
       
       - Effect: Allow
         Action:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
-
-      - Effect: Allow
-        Action:
-          - lambda:InvokeFunction
-        Resource: 
-          - arn:aws:lambda:${self:provider.region}:${aws:accountId}:function:site-asso-api-${sls:stage}-accessTokenGenerator
     events:
       - httpApi:
           method: GET
@@ -229,18 +218,6 @@ functions:
       - httpApi:
           method: DELETE
           path: /removeAuthUser
-
-  accessTokenGenerator:
-    handler: backend/lambda/accessTokenLambda.handler
-    memorySize: 1024
-    architecture: arm64
-    environment:
-      KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - kms:Sign
-        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
           
   onRegisterAuth: #Ajout de nouveau user dans la table générale des users
     handler: backend/lambda/onRegisterAuthLambda.handler

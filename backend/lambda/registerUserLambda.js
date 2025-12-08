@@ -1,17 +1,16 @@
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { nanoid } from "nanoid";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
+
 import { hashPassword } from "../auth/auth.js";
-import { normalizeEmail, json, decode } from "../helpers/toolbox.js";
+import { json } from "../helpers/toolbox.js";
+import { normalizeEmail } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
-const STAGE = process.env.STAGE;
-
-const client = new LambdaClient({ region: process.env.AWS_REGION });
 
 // event must contain email, password in body
 
@@ -61,36 +60,20 @@ async function registerUserCore(event) {
         }
 
         const payload = { userId: res.userId, email, privilege };
-
-        const rawGenResult = await client.send(
-            new InvokeCommand({
-                FunctionName: `site-asso-api-${STAGE}-accessTokenGenerator`,
-                Payload: Buffer.from(JSON.stringify({ payload })),
-            })
-        );
-
-        console.log("rawGenResult", rawGenResult);
-
-        const genResult = decode(rawGenResult.Payload);
-
-        if (genResult.statusCode !== 201) {
-            console.error("Error generating access token:", genResult);
-            return json(500, { ok: false, message: "INTERNAL_ERROR" });
-        }
+        const accessToken = await signAccessTokenWithKms(payload);
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: res.userId, privilege });
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
-
         if (!resultEvent.FailedEntryCount) {
             return json(201, {
                 ok: true,
                 userId: res.userId,
-                accessToken: genResult.body.accessToken,
+                accessToken: accessToken,
                 message: res.message
-            });
+            });;
         }
 
         console.error("registerUserCore: eventBridgePutEvents failed", {

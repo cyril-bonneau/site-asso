@@ -1,25 +1,13 @@
+import { KMSClient, SignCommand } from "@aws-sdk/client-kms";
+import { toBase64Url } from "../helpers/toolbox.js";
 import { signAccessToken } from "../dal/requestToKms.js";
-import { toBase64Url, json } from "../helpers/toolbox.js";
 
-export async function handler(event) {
-    try {
-        let data;
-        try {
-            data = JSON.parse(event.body);
-        } catch (err) {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" })
-        }
+const region = process.env.AWS_REGION || "eu-west-3";
+const keyId = process.env.KMS_JWT_KEY_ID;
 
-        const accessToken = await signAccessTokenWithKms(data.payload);
-        console.info("Generated access token via KMS");
-        return json(201, { ok: true, accessToken });
-    } catch (err) {
-        console.error("Fatal error in access token handler:", err);
-        return json(500, { ok: false, message: "INTERNAL_ERROR" });
-    }
-}
+const kms = new KMSClient({ region });
 
-async function signAccessTokenWithKms(payload = {}, options = {}) {
+export async function signAccessTokenWithKms(payload = {}, options = {}) {
 
     const { expiresIn = 15 * 60, issuer = "site-asso/api", audience = "site-asso/frontend" } = options;
 
@@ -43,7 +31,7 @@ async function signAccessTokenWithKms(payload = {}, options = {}) {
     const payloadB64 = toBase64Url(Buffer.from(JSON.stringify(payloadFinal)));
     const dataToSign = Buffer.from(`${headerB64}.${payloadB64}`);
 
-    const signRes = await signAccessToken(dataToSign);
+    const signRes = signAccessToken(dataToSign);
 
     if (!signRes.Signature) {
         throw new Error("KMS_SIGNING_FAILED");

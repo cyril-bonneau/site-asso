@@ -2,12 +2,7 @@ import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
 import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import { decode } from "../helpers/toolbox.js";
-
-const STAGE = process.env.STAGE;
-
-const client = new LambdaClient({ region: process.env.AWS_REGION });
+import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 
 export const handler = withRateLimit(handlerCore, {
     scope: "login",
@@ -51,26 +46,15 @@ async function loginCore({ email, password }) {
         }
 
         const payload = { userId, email: normalizeEmail(email), privilege };
+        const accessToken = await signAccessTokenWithKms(payload);
 
-        const rawGenResult = await client.send(
-            new InvokeCommand({
-                FunctionName: `site-asso-api-${STAGE}-accessTokenGenerator`,
-                Payload: Buffer.from(JSON.stringify({ payload })),
-            })
-        );
-
-        const genResult = decode(rawGenResult.Payload);
-        if (genResult.statusCode !== 201) {
-            console.error("Error generating access token:", genResult);
-            return json(500, { ok: false, message: "INTERNAL_ERROR" });
-        }
-        console.log("accessToken", genResult.body.accessToken);
+        console.log("accessToken", accessToken)
 
         return json(200, {
             ok: true,
             userId: userId,
             message: "LOGGED_IN",
-            accessToken: genResult.body.accessToken,
+            accessToken,
             // refreshToken,
         });
 
