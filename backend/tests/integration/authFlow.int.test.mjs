@@ -76,6 +76,7 @@ describe("Parcours complet Auth (intégration)", () => {
         const response = decode(payload.Payload);
 
         console.log("LoginUser Lambda response:", response);
+        console.log("Logged in accessToken:", response.body.accessToken);
 
         userId = response.body.userId;
 

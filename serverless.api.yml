@@ -133,17 +133,18 @@ functions:
           - dynamodb:GetItem
         Resource: 
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-
-      - Effect: Allow
-        Action:
-          - kms:Sign
-        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
       
       - Effect: Allow
         Action:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+
+      - Effect: Allow
+        Action:
+          - lambda:InvokeFunction
+        Resource: 
+          - arn:aws:lambda:${self:provider.region}:${aws:accountId}:function:site-asso-api-${sls:stage}-accessTokenGenerator
     events:
       - httpApi:
           method: GET
@@ -220,6 +221,18 @@ functions:
       - httpApi:
           method: DELETE
           path: /removeAuthUser
+
+  accessTokenGenerator:
+    handler: backend/lambda/accessTokenLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - kms:Sign
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
           
   onRegisterAuth: #Ajout de nouveau user dans la table générale des users
     handler: backend/lambda/onRegisterAuthLambda.handler
