@@ -1,4 +1,4 @@
-import { signAccessToken } from "../dal/requestToKms";
+import { signAccessToken } from "../dal/requestToKms.js";
 import { toBase64Url, json } from "../helpers/toolbox.js";
 
 export async function handler(event) {

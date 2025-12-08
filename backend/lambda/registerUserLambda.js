@@ -69,6 +69,8 @@ async function registerUserCore(event) {
             })
         );
 
+        console.log("rawGenResult", rawGenResult);
+
         const genResult = decode(rawGenResult.Payload);
 
         if (genResult.statusCode !== 201) {

@@ -13,5 +13,6 @@ export async function signAccessToken(dataToSign) {
             SigningAlgorithm: "RSASSA_PSS_SHA_256",
         })
     );
+    console.log("signRes", signRes);
     return signRes;
 }
