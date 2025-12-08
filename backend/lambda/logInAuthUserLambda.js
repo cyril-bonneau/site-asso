@@ -49,6 +49,7 @@ async function loginCore({ email, password }) {
         }
 
         const payload = { userId, email: normalizeEmail(email), privilege };
+
         const rawGenResult = await client.send(
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-accessTokenGenerator`,
