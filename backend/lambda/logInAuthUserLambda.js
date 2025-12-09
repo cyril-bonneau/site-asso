@@ -50,7 +50,9 @@ async function loginCore({ email, password }) {
 
         console.log("accessToken", accessToken)
 
-        const refreshToken = generateRefreshToken(userId);
+        const refreshToken = await generateRefreshToken(userId);
+
+        console.log("refreshToken", refreshToken)
 
         const hashedRefreshToken = hashRefreshToken(refreshToken);
 
@@ -81,7 +83,7 @@ async function loginCore({ email, password }) {
         if (err?.message === "AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH") {
             return json(404, { ok: false, message: "AUTH_NOT_FOUND" });
         }
-        console.warn("loginCore: checkPasswordByEmail error", err);
+        console.warn("loginCore error", err);
         return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
 }

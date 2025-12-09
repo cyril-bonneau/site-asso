@@ -11,6 +11,7 @@ const USER_TABLE = process.env.USER_TABLE;
 
 export async function checkPasswordByEmail({ password, email }) {
     const auth = await getAuthByEmail(email)
+    console.log("checkPasswordByEmail auth:", auth);
 
     if (!auth || !auth.passwordHash) {
         throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
@@ -19,7 +20,8 @@ export async function checkPasswordByEmail({ password, email }) {
     if (await verifyPassword(auth.passwordHash, password)) {
         return {
             check: true,
-            userId: auth.userId
+            userId: auth.userId,
+            privilege: auth.privilege
         }
     } else {
         return {
@@ -43,6 +45,7 @@ async function getAuthByEmail(email) {
         )
         console.log("getAuthByEmail result:", res.Items[0]);
         res.Items[0].privilege = await getPrivilegeByUserId(res.Items[0].userId)
+        console.log("getAuthByEmail result 2:", res.Items[0]);
         return res.Items[0]
     } catch (err) {
         return err
@@ -61,8 +64,8 @@ async function getPrivilegeByUserId(userId) {
                 ProjectionExpression: "privilege",
             })
         )
-        console.log("getPrivilegeByUserId result:", res.Items[0]);
-        return res.Items.privilege
+        console.log("getPrivilegeByUserId result:", res.Item.privilege[0]);
+        return res.Item.privilege[0]
     } catch (err) {
         console.error("getPrivilegeByUserId error:", err);
         return err

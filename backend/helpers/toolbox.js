@@ -54,7 +54,7 @@ export function buildRefreshCookie(refreshToken) {
     return `refreshToken=${refreshToken}; HttpOnly;${securePart} SameSite=${sameSite}; Path=/; Max-Age=${maxAgeSec}`;
 }
 
-export function generateRefreshToken(userId) {
+export async function generateRefreshToken(userId) {
     const nowSec = Math.floor(Date.now() / 1000);
     const refreshTokenPayload = {
         userId: userId,
