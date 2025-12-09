@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { jwtSign } from "jose/jwt/sign";
+import { SignJWT } from "jose/jwt/sign";
 
 export function normalizeEmail(email) {
     return String(email).trim().toLowerCase();
@@ -61,6 +61,8 @@ export function generateRefreshToken(userId) {
         issuedAt: nowSec,
         expiredAt: nowSec + (30 * 24 * 60 * 60) // 30 jours
     };
-    const refreshToken = jwtSign(refreshTokenPayload, REFRESH_JWT_HMAC);
+    const refreshToken = new SignJWT(refreshTokenPayload)
+        .setProtectedHeader({ alg: "HS256" })
+        .sign(REFRESH_JWT_HMAC);
     return refreshToken;
 }
