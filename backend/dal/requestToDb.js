@@ -4,6 +4,7 @@ import {
     TransactWriteCommand,
     UpdateCommand,
     DeleteCommand,
+    PutCommand,
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
@@ -34,6 +35,15 @@ export async function getFromDb(getRequest) {
         return res.Item
     } catch (err) {
         console.log("error while getting data", err)
+        throw err
+    }
+}
+
+export async function sendPutToDb(putRequest) {
+    try {
+        await ddb.send(new PutCommand(putRequest))
+    } catch (err) {
+        console.error("put failed", err)
         throw err
     }
 }

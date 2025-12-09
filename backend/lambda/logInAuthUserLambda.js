@@ -1,8 +1,12 @@
 import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
-import { json } from "../helpers/toolbox.js";
-import { normalizeEmail } from "../helpers/toolbox.js";
+import { normalizeEmail, hashRefreshToken, json, buildRefreshCookie, generateRefreshToken } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
+import { sendPutToDb } from "../dal/requestToDb.js";
+import { storeRefreshToken } from "../dal/tokenStore.js";
+
+REFRESH_JWT_HMAC = process.env.REFRESH_JWT_HMAC;
+TOKEN_TABLE = process.env.TOKEN_TABLE;
 
 export const handler = withRateLimit(handlerCore, {
     scope: "login",
@@ -50,13 +54,32 @@ async function loginCore({ email, password }) {
 
         console.log("accessToken", accessToken)
 
-        return json(200, {
-            ok: true,
-            userId: userId,
-            message: "LOGGED_IN",
-            accessToken,
-            // refreshToken,
-        });
+        const refreshToken = generateRefreshToken(userId);
+
+        const hashedRefreshToken = hashRefreshToken(refreshToken);
+
+        console.log("hashedRefreshToken", hashedRefreshToken)
+
+        const res = await storeRefreshToken(hashedRefreshToken, userId);
+
+        if (!res) {
+            return json(500, { ok: false, message: "INTERNAL_ERROR" });
+        }
+
+        const cookieString = buildRefreshCookie(refreshToken);
+
+        return json(
+            200,
+            {
+                ok: true,
+                userId: userId,
+                message: "LOGGED_IN",
+                accessToken,
+            },
+            {
+                "Set-Cookie": cookieString
+            }
+        );
 
     } catch (err) {
         if (err?.message === "AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH") {

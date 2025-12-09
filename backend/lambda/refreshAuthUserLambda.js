@@ -2,7 +2,7 @@ import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js"
 import { parse } from "cookie"
 import { getFromDb } from "../dal/requestToDb.js";
 import { jwtVerify } from "jose";
-import { json } from "../helpers/toolbox.js";
+import { json, hashRefreshToken } from "../helpers/toolbox.js";
 import crypto from "crypto";
 
 const TOKEN_TABLE = process.env.TOKEN_TABLE
@@ -14,12 +14,12 @@ export const handler = async (event) => {
         const refreshToken = getRefreshTokenFromEvent(event);
         if (refreshToken === null) return json(404, { ok: false, message: "REFRESH_TOKEN_NOT_FOUND" })
 
-        const result = await checkandGetRefreshTokenData(refreshToken);
+        const result = await getRefreshTokenData(refreshToken);
 
         const refreshHash = hashRefreshToken(refreshToken);
         console.log("refreshHash", refreshHash)
 
-        if (await checkRefreshTokenInDb(refreshHash) !== true) {
+        if (!await checkRefreshTokenInDb(refreshHash)) {
             return json(404, { ok: false, message: "REFRESH_TOKEN_EXPIRED" });
         }
         const userData = await getUserData(result.userId);
@@ -68,13 +68,13 @@ async function checkRefreshTokenInDb(refreshHash) {
         }
     };
     const data = await getFromDb(req);
-    if (data === undefined) {
+    if (data === undefined || data.expiredAt < Math.floor(Date.now() / 1000)) {
         throw new Error("REFRESH_TOKEN_NOT_FOUND")
     }
     return true;
 }
 
-async function checkandGetRefreshTokenData(refreshToken) {
+async function getRefreshTokenData(refreshToken) {
     try {
         const secret = new TextEncoder().encode(SECRET_HMAC);
         const { payload } = await jwtVerify(
@@ -82,8 +82,8 @@ async function checkandGetRefreshTokenData(refreshToken) {
             secret,
             {
                 algorithms: ['HS256'],
-                issuer: 'site-asso',
-                audience: 'site-asso-refresh-token',
+                // issuer: 'site-asso/api',
+                // audience: 'site-asso/frontend',
             }
         )
 
@@ -101,13 +101,6 @@ async function checkandGetRefreshTokenData(refreshToken) {
     } catch (err) {
         throw new Error("REFRESH_TOKEN_INVALID")
     }
-}
-
-function hashRefreshToken(refreshToken) {
-    return crypto
-        .createHash('sha256')
-        .update(refreshToken)
-        .digest('hex');
 }
 
 /**

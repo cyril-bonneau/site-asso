@@ -21,6 +21,7 @@ provider:
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
     PROJECT_AWS_REGION: ${self:provider.region}
+    STAGE: ${sls:stage}
 
 plugins:
   # - ./backend/node_modules/serverless-esbuild
@@ -51,6 +52,7 @@ functions:
       REGISTER_EVENT_BUS: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusName}
       JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
       KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -88,6 +90,8 @@ functions:
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
       JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
       KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
+      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
