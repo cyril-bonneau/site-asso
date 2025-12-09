@@ -188,6 +188,32 @@ functions:
       - httpApi:
           method: DELETE
           path: /removeAuthUser
+
+  refreshAuthUser:
+    handler: backend/lambda/refreshAuthUserLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac~true}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+    iamRoleStatements:
+      
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - kms:Sign
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
+
+    events:
+      - httpApi:
+          method: POST
+          path: /refresh
           
   onRegisterAuth: #Ajout de nouveau user dans la table générale des users
     handler: backend/lambda/onRegisterAuthLambda.handler
@@ -219,44 +245,6 @@ functions:
           - dynamodb:ConditionCheckItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-
-  # onUpdateAuthUserStream: #Ajout de nouveau user dans la table générale des users
-  #   handler: backend/lambda/onUpdateAuthStreamLambda.handler
-  #   architecture: arm64           # ARM64 conseillé
-  #   memorySize: 1024              # 1024–1536 Mo pour marge CPU
-  #   timeout: 30
-  #   environment:
-  #     USERS_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
-  #   events:
-  #     - stream:
-  #         type: dynamodb
-  #         arn: ${cf:site-asso-infra-${sls:stage}.DdbAuthStreamArn}  # <- Output ARN du stream
-  #         batchSize: 10
-  #         startingPosition: LATEST
-  #         maximumRetryAttempts: 3
-  #         bisectBatchOnFunctionError: true
-  #         destinations:
-  #           onFailure:
-  #             type: sqs
-  #             arn:
-  #               Fn::GetAtt: [ AuthStreamDLQ, Arn ]
-  #   iamRoleStatements:
-  #     - Effect: Allow
-  #       Action:
-  #         - dynamodb:UpdateItem
-  #         - dynamodb:DeleteItem
-  #         - dynamodb:PutItem
-  #         - dynamodb:TransactWriteItems
-  #         - dynamodb:ConditionCheckItem
-  #       Resource:
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-
-  #     - Effect: Allow
-  #       Action:
-  #         - sqs:SendMessage
-  #         - sqs:GetQueueAttributes
-  #       Resource:
-  #         - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
   onRemoveAuthUserStream: #suppression de user dans la table générale des users
     handler: backend/lambda/onRemoveAuthStreamLambda.handler

@@ -12,7 +12,7 @@ const RETRYABLE = new Set([
     "LimitExceededException",
 ]);
 
-// ----- handler de stream -----
+// ----- handler d'event bus -----
 export const handler = async (event) => {
     try {
 

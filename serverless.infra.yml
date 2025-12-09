@@ -178,6 +178,15 @@ resources:
       Export:
         Name: site-asso-infra-${sls:stage}-DdbRateLimitTableArn
 
+    DdbTokenTable:
+      Value: !Ref TokenTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbTokenTable
+    DdbTokenTableArn:
+      Value: !GetAtt TokenTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbTokenTableArn
+
     RegisterEventBusName:
       Value: !Ref EventBusSiteAssoRegister
       Export:

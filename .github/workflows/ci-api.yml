@@ -99,6 +99,14 @@ jobs:
           role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
           role-session-name: site-asso-ci
 
+      - name: setup refresh secret key
+        run: |
+          aws ssm put-parameter \
+            --name "/site-asso/${STAGE}/secret/refreshTokenHmac" \
+            --value "${{ secrets.REFRESH_JWT_SECRET }}" \
+            --type SecureString \
+            --overwrite
+
       - name: Debug - config Serverless compilée
         working-directory: .
         env:
