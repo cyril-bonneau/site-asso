@@ -195,7 +195,7 @@ functions:
     architecture: arm64
     environment:
       TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
-      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac~true}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
       USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     iamRoleStatements:
       
