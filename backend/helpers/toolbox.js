@@ -1,7 +1,8 @@
 import crypto from "crypto";
 import { SignJWT } from "jose/jwt/sign";
 
-const REFRESH_JWT_HMAC = process.env.REFRESH_JWT_HMAC;
+const REFRESH_JWT_HMAC = crypto
+    .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
 
 export function normalizeEmail(email) {
     return String(email).trim().toLowerCase();
