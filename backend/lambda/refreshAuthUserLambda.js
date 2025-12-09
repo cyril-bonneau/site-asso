@@ -3,7 +3,6 @@ import { parse } from "cookie"
 import { getFromDb } from "../dal/requestToDb.js";
 import { jwtVerify } from "jose";
 import { json, hashRefreshToken } from "../helpers/toolbox.js";
-import crypto from "crypto";
 
 const TOKEN_TABLE = process.env.TOKEN_TABLE
 const SECRET_HMAC = process.env.REFRESH_JWT_HMAC

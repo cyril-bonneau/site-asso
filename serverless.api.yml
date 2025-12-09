@@ -90,6 +90,7 @@ functions:
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
       JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
       KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
       REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
       TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
     iamRoleStatements:
