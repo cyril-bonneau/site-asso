@@ -2,11 +2,7 @@ import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
 import { normalizeEmail, hashRefreshToken, json, buildRefreshCookie, generateRefreshToken } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
-import { sendPutToDb } from "../dal/requestToDb.js";
 import { storeRefreshToken } from "../dal/tokenStore.js";
-
-REFRESH_JWT_HMAC = process.env.REFRESH_JWT_HMAC;
-TOKEN_TABLE = process.env.TOKEN_TABLE;
 
 export const handler = withRateLimit(handlerCore, {
     scope: "login",

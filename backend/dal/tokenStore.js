@@ -1,5 +1,7 @@
 import { sendPutToDb } from "./requestToDb.js";
 
+const TOKEN_TABLE = process.env.TOKEN_TABLE;
+
 export async function storeRefreshToken(hashedRefreshToken, userId) {
     const params = {
         TableName: process.env.TOKEN_TABLE,
