@@ -106,8 +106,8 @@ resources:
         KeySchema:
           - { AttributeName: PK, KeyType: HASH }
         TimeToLiveSpecification:
-          AttributeName: expiredAt
-          Enabled: true
+          AttributeName: TTL
+          Enabled: false
 
     TokenTable:
       Type: AWS::DynamoDB::Table
@@ -121,8 +121,8 @@ resources:
           - { AttributeName: PK, KeyType: HASH }
           - { AttributeName: SK, KeyType: RANGE }
         TimeToLiveSpecification:
-          AttributeName: expiredAt
-          Enabled: true
+          AttributeName: TTL
+          Enabled: false
 
     EventBusSiteAssoRegister:
       Type: AWS::Events::EventBus
