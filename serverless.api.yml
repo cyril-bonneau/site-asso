@@ -75,6 +75,11 @@ functions:
 
       - Effect: Allow
         Action:
+          - dynamodb:PutItem
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
+
+      - Effect: Allow
+        Action:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
