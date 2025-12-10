@@ -3,6 +3,7 @@ import { normalizeEmail, hashRefreshToken, json, buildRefreshCookie, generateRef
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 import { storeRefreshToken } from "../dal/tokenStore.js";
+import crypto from "crypto";
 
 export const handler = withRateLimit(handlerCore, {
     scope: "login",
