@@ -1,16 +1,18 @@
-import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { nanoid } from "nanoid";
+import crypto from "crypto";
+import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
-
 import { hashPassword } from "../auth/auth.js";
-import { json } from "../helpers/toolbox.js";
-import { normalizeEmail } from "../helpers/toolbox.js";
+import { json, normalizeEmail, buildRefreshCookie, generateRefreshToken, hashRefreshToken } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
+import { storeRefreshToken } from "../dal/tokenStore.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
+const REFRESH_JWT_HMAC = crypto
+    .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
 
 // event must contain email, password in body
 
@@ -59,21 +61,73 @@ async function registerUserCore(event) {
             return json(res.statusCode || 500, { ok: false, message: res.error || "INTERNAL_ERROR" })
         }
 
-        const payload = { userId: res.userId, email, privilege };
+        const userId = res.userId;
+        const payload = { userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
         // il est attendu au minimum userId, email, firstName, lastName
-        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId: res.userId, privilege });
+        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId, privilege });
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
-        if (!resultEvent.FailedEntryCount) {
-            return json(201, {
-                ok: true,
-                userId: res.userId,
-                accessToken: accessToken,
-                message: res.message
-            });;
+
+        try {
+            const refreshToken = await generateRefreshToken(userId, REFRESH_JWT_HMAC);
+
+            console.log("refreshToken", refreshToken)
+
+            const hashedRefreshToken = hashRefreshToken(refreshToken);
+
+            console.log("hashedRefreshToken", hashedRefreshToken)
+
+            const response = await storeRefreshToken(hashedRefreshToken, userId);
+
+            console.log("storeRefreshToken result", response)
+
+            if (response.$metadata.httpStatusCode !== 200) {
+                console.warn("registerUserCore: storeRefreshToken failed", { response });
+
+                if (!resultEvent.FailedEntryCount) {
+                    return json(
+                        201,
+                        {
+                            ok: true,
+                            userId: userId,
+                            message: res.message
+                        }
+                    );
+                }
+            }
+
+            const cookieString = buildRefreshCookie(refreshToken);
+
+            if (!resultEvent.FailedEntryCount) {
+                return json(
+                    201,
+                    {
+                        ok: true,
+                        userId: userId,
+                        accessToken: accessToken,
+                        message: res.message
+                    },
+                    {
+                        "Set-Cookie": cookieString
+                    }
+                );
+            }
+        } catch (err) {
+            console.warn("registerUserCore: error in refreshTokenPart", { err });
+
+            if (!resultEvent.FailedEntryCount) {
+                return json(
+                    201,
+                    {
+                        ok: true,
+                        userId: userId,
+                        message: res.message
+                    }
+                );
+            }
         }
 
         console.error("registerUserCore: eventBridgePutEvents failed", {
