@@ -11,6 +11,9 @@ export const handler = withRateLimit(handlerCore, {
     windowSeconds: true
 })
 
+const REFRESH_JWT_HMAC = crypto
+    .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
+
 async function handlerCore(event) {
     try {
         let data;
@@ -50,7 +53,7 @@ async function loginCore({ email, password }) {
 
         console.log("accessToken", accessToken)
 
-        const refreshToken = await generateRefreshToken(userId);
+        const refreshToken = await generateRefreshToken(userId, REFRESH_JWT_HMAC);
 
         console.log("refreshToken", refreshToken)
 
@@ -60,7 +63,9 @@ async function loginCore({ email, password }) {
 
         const res = await storeRefreshToken(hashedRefreshToken, userId);
 
-        if (!res) {
+        console.log("storeRefreshToken result", res)
+
+        if (res.$metadata.httpStatusCode !== 200) {
             return json(500, { ok: false, message: "INTERNAL_ERROR" });
         }
 

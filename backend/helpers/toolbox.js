@@ -1,9 +1,6 @@
 import crypto from "crypto";
 import { SignJWT } from "jose/jwt/sign";
 
-const REFRESH_JWT_HMAC = crypto
-    .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
-
 export function normalizeEmail(email) {
     return String(email).trim().toLowerCase();
 }
@@ -55,7 +52,7 @@ export function buildRefreshCookie(refreshToken) {
     return `refreshToken=${refreshToken}; HttpOnly;${securePart} SameSite=${sameSite}; Path=/; Max-Age=${maxAgeSec}`;
 }
 
-export async function generateRefreshToken(userId) {
+export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
     const nowSec = Math.floor(Date.now() / 1000);
     const refreshTokenPayload = {
         userId: userId,

@@ -41,7 +41,7 @@ export async function getFromDb(getRequest) {
 
 export async function sendPutToDb(putRequest) {
     try {
-        await ddb.send(new PutCommand(putRequest))
+        return await ddb.send(new PutCommand(putRequest))
     } catch (err) {
         console.error("put failed", err)
         throw err

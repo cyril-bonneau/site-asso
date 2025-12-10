@@ -4,7 +4,7 @@ const TOKEN_TABLE = process.env.TOKEN_TABLE;
 
 export async function storeRefreshToken(hashedRefreshToken, userId) {
     const params = {
-        TableName: process.env.TOKEN_TABLE,
+        TableName: TOKEN_TABLE,
         Item: {
             PK: hashedRefreshToken,
             SK: 'REFRESH',
@@ -14,7 +14,9 @@ export async function storeRefreshToken(hashedRefreshToken, userId) {
         }
     }
     try {
-        return await sendPutToDb(params);
+        const result = await sendPutToDb(params);
+        console.log("storeRefreshToken: successfully stored refresh token", result);
+        return result;
     } catch (err) {
         console.error("storeRefreshToken: error storing refresh token", err);
         throw err;
