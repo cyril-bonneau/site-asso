@@ -15,13 +15,6 @@ export async function initKeys() {
     refreshKeys = loaded.refresh;
 }
 
-export async function signAccessToken(user) {
-    return await new SignJWT({ sub: String(user) })
-        .setProtectedHeader({ alg: ALG })
-        .setExpirationTime(ACCESS_TTL)
-        .sign(accessKeys.privateKey);
-}
-
 export async function signRefreshToken(user, jti) {
     return await new SignJWT({ sub: String(user), jti })
         .setProtectedHeader({ alg: ALG })

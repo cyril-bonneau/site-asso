@@ -31,7 +31,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-registerUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-registerUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -44,8 +44,11 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.ok).toBe(true);
         expect(response.body.userId).toBeDefined();
         expect(response.body.message).toBe("user successfully created");
+        // expect(response.body.accessToken).toBeDefined();
+        console.log("RegisterUser Lambda response body:", response.body.accessToken);
 
         userId = response.body.userId;
+        console.log("Created userId:", userId);
 
         await new Promise(resolve => setTimeout(resolve, 3000));
         const profileAfterCreation = await getUserProfileByUserId(userId);
@@ -65,7 +68,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-loginUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -73,6 +76,7 @@ describe("Parcours complet Auth (intégration)", () => {
         const response = decode(payload.Payload);
 
         console.log("LoginUser Lambda response:", response);
+        console.log("Logged in accessToken:", response.body.accessToken);
 
         userId = response.body.userId;
 
@@ -96,7 +100,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-updateAuthUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
                     body: JSON.stringify(body)
@@ -132,7 +136,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         let payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-updateAuthUserPassword",
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUserPassword`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
                     body: JSON.stringify(body)
@@ -154,7 +158,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-loginUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -175,7 +179,7 @@ describe("Parcours complet Auth (intégration)", () => {
         // le nouveau fonctionne
         payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-loginUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
                 Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
             })
         );
@@ -199,7 +203,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const payload = await client.send(
             new InvokeCommand({
-                FunctionName: "site-asso-api-dev-removeAuthUser",
+                FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
                     body: JSON.stringify(body)

@@ -24,17 +24,21 @@ resources:
         KeySchema:
           - { AttributeName: PK, KeyType: HASH }
           - { AttributeName: SK, KeyType: RANGE }
+          
         GlobalSecondaryIndexes:
+        
           - IndexName: GSI1
             KeySchema:
               - { AttributeName: GSI1, KeyType: HASH }
               - { AttributeName: SK,   KeyType: RANGE }
             Projection: { ProjectionType: ALL }
+
           - IndexName: GSI2
             KeySchema:
               - { AttributeName: GSI2, KeyType: HASH }
               - { AttributeName: SK,   KeyType: RANGE }
             Projection: { ProjectionType: ALL }
+
         TimeToLiveSpecification:
           AttributeName: TTL
           Enabled: true
@@ -65,7 +69,7 @@ resources:
                 - userId
                 - createdAt
 
-          - IndexName: GSI1v4
+          - IndexName: GSI1v5
             KeySchema:
               - { AttributeName: GSI1PK, KeyType: HASH }
               - { AttributeName: GSI1SK, KeyType: RANGE }
@@ -74,6 +78,18 @@ resources:
               NonKeyAttributes:
                 - passwordHash
                 - userId
+                - roles
+
+          - IndexName: GSI1v6
+            KeySchema:
+              - { AttributeName: GSI1PK, KeyType: HASH }
+              - { AttributeName: GSI1SK, KeyType: RANGE }
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - passwordHash
+                - userId
+                - privilege
         TimeToLiveSpecification:
           AttributeName: TTL
           Enabled: true
@@ -91,12 +107,43 @@ resources:
           - { AttributeName: PK, KeyType: HASH }
         TimeToLiveSpecification:
           AttributeName: TTL
+          Enabled: false
+
+    TokenTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: site-asso-${sls:stage}-token
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S } #TOKEN#xxxxxxxxxxxx
+          - { AttributeName: SK, AttributeType: S } #TYPE#xxxx
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH }
+          - { AttributeName: SK, KeyType: RANGE }
+        TimeToLiveSpecification:
+          AttributeName: expiredAt
           Enabled: true
 
     EventBusSiteAssoRegister:
       Type: AWS::Events::EventBus
       Properties:
         Name: site-asso-event-bus-register-${sls:stage}
+
+    KmsJwtSigningKey:
+      Type: AWS::KMS::Key
+      Properties:
+        Description: "KMS key used to sign JWT access tokens for site-asso"
+        KeySpec: RSA_2048
+        KeyUsage: SIGN_VERIFY
+        Enabled: true
+        MultiRegion: false
+        PendingWindowInDays: 7
+
+    KmsJwtSigningAlias:
+      Type: AWS::KMS::Alias
+      Properties:
+        AliasName: alias/site-asso-auth-${sls:stage}
+        TargetKeyId: !Ref KmsJwtSigningKey
 
   Outputs:
 
@@ -131,6 +178,15 @@ resources:
       Export:
         Name: site-asso-infra-${sls:stage}-DdbRateLimitTableArn
 
+    DdbTokenTable:
+      Value: !Ref TokenTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbTokenTable
+    DdbTokenTableArn:
+      Value: !GetAtt TokenTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbTokenTableArn
+
     RegisterEventBusName:
       Value: !Ref EventBusSiteAssoRegister
       Export:
@@ -139,3 +195,8 @@ resources:
       Value: !GetAtt EventBusSiteAssoRegister.Arn
       Export:
         Name: site-asso-infra-${sls:stage}-RegisterEventBusArn
+
+    KmsJwtSigningKeyArn:
+      Value: !GetAtt KmsJwtSigningKey.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-KmsJwtSigningKeyArn

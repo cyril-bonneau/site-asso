@@ -4,6 +4,7 @@ import {
     TransactWriteCommand,
     UpdateCommand,
     DeleteCommand,
+    PutCommand,
     GetCommand
 } from "@aws-sdk/lib-dynamodb";
 
@@ -29,9 +30,20 @@ export async function sendTransactToDb(transactItems, CancellationReasons) {
 
 export async function getFromDb(getRequest) {
     try {
-        return { Item } = await ddb.send(new GetCommand(getRequest))
+        const res = await ddb.send(new GetCommand(getRequest))
+        console.log("getFromDb result", res)
+        return res.Item
     } catch (err) {
         console.log("error while getting data", err)
+        throw err
+    }
+}
+
+export async function sendPutToDb(putRequest) {
+    try {
+        return await ddb.send(new PutCommand(putRequest))
+    } catch (err) {
+        console.error("put failed", err)
         throw err
     }
 }

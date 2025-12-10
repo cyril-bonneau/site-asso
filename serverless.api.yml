@@ -18,10 +18,10 @@ provider:
   environment:
     # NODE_OPTIONS: '--enable-source-maps' # Pour activer les sourcemaps dans CloudWatch Logs à retirer dans la prod
     RUNTIME: 'lambda'
-    # Récupère la table depuis la stack infra (via Outputs)
     USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
     PROJECT_AWS_REGION: ${self:provider.region}
+    STAGE: ${sls:stage}
 
 plugins:
   # - ./backend/node_modules/serverless-esbuild
@@ -34,7 +34,7 @@ plugins:
 #     format: cjs            
 #     sourcemap: true
 #     minify: false
-#     external: []           # bundle tout (évite les “missing module”)
+#     external: []
 #     mainFields:
 #       - module
 #       - main
@@ -42,45 +42,19 @@ plugins:
 #       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
-
-  # addUser:
-  #   handler: backend/lambda/addUserLambda.handler
-  #   iamRoleStatements:
-  #     - Effect: Allow
-  #       Action:
-  #         - dynamodb:PutItem
-  #       Resource:
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-  #   events:
-  #     - httpApi: 
-  #         method: PUT
-  #         path: /addUser
-
-  # getUser:
-  #   handler: backend/lambda/getUserLambda.handler
-  #   iamRoleStatements:
-  #     - Effect: Allow
-  #       Action:
-  #         - dynamodb:GetItem
-  #       Resource:
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}/index/*
-  #   events:
-  #     - httpApi: 
-  #         method: GET
-  #         path: /getUser
-
   registerUser:
     handler: backend/lambda/registerUserLambda.handler
-    # reservedConcurrency: 5
     memorySize: 1024
     architecture: arm64
-    # provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
       REGISTER_EVENT_BUS: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusName}
+      JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
+      KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -91,8 +65,18 @@ functions:
 
       - Effect: Allow
         Action:
+          - kms:Sign
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
+
+      - Effect: Allow
+        Action:
           - events:PutEvents
         Resource: ${cf:site-asso-infra-${sls:stage}.RegisterEventBusArn}
+
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
 
       - Effect: Allow
         Action:
@@ -108,10 +92,14 @@ functions:
     handler: backend/lambda/logInAuthUserLambda.handler
     memorySize: 1024
     architecture: arm64
-    # provisionedConcurrency: 1
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
+      JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
+      KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
+      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -119,12 +107,29 @@ functions:
         Resource: 
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}/index/*
+
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - kms:Sign
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
       
       - Effect: Allow
         Action:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
+
     events:
       - httpApi:
           method: GET
@@ -201,6 +206,32 @@ functions:
       - httpApi:
           method: DELETE
           path: /removeAuthUser
+
+  refreshAuthUser:
+    handler: backend/lambda/refreshAuthUserLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
+      REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
+      USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+    iamRoleStatements:
+      
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - kms:Sign
+        Resource: ${cf:site-asso-infra-${sls:stage}.KmsJwtSigningKeyArn}
+
+    events:
+      - httpApi:
+          method: POST
+          path: /refresh
           
   onRegisterAuth: #Ajout de nouveau user dans la table générale des users
     handler: backend/lambda/onRegisterAuthLambda.handler
@@ -232,44 +263,6 @@ functions:
           - dynamodb:ConditionCheckItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-
-  # onUpdateAuthUserStream: #Ajout de nouveau user dans la table générale des users
-  #   handler: backend/lambda/onUpdateAuthStreamLambda.handler
-  #   architecture: arm64           # ARM64 conseillé
-  #   memorySize: 1024              # 1024–1536 Mo pour marge CPU
-  #   timeout: 30
-  #   environment:
-  #     USERS_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
-  #   events:
-  #     - stream:
-  #         type: dynamodb
-  #         arn: ${cf:site-asso-infra-${sls:stage}.DdbAuthStreamArn}  # <- Output ARN du stream
-  #         batchSize: 10
-  #         startingPosition: LATEST
-  #         maximumRetryAttempts: 3
-  #         bisectBatchOnFunctionError: true
-  #         destinations:
-  #           onFailure:
-  #             type: sqs
-  #             arn:
-  #               Fn::GetAtt: [ AuthStreamDLQ, Arn ]
-  #   iamRoleStatements:
-  #     - Effect: Allow
-  #       Action:
-  #         - dynamodb:UpdateItem
-  #         - dynamodb:DeleteItem
-  #         - dynamodb:PutItem
-  #         - dynamodb:TransactWriteItems
-  #         - dynamodb:ConditionCheckItem
-  #       Resource:
-  #         - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-
-  #     - Effect: Allow
-  #       Action:
-  #         - sqs:SendMessage
-  #         - sqs:GetQueueAttributes
-  #       Resource:
-  #         - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
   onRemoveAuthUserStream: #suppression de user dans la table générale des users
     handler: backend/lambda/onRemoveAuthStreamLambda.handler
