@@ -84,6 +84,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.statusCode).toBe(200);
         expect(response.body.userId).toBeDefined();
         expect(response.body.ok).toBe(true);
+        expect(response.headers["Set-Cookie"]).toBeDefined();
         expect(response.body.message).toBe("LOGGED_IN");
 
     });
