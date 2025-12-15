@@ -1,6 +1,5 @@
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { importSPKI } from "jose";
-import { cache } from "react";
 
 let cachedPublicKey = null;          // KeyLike JOSE
 let cachedPem = null;                // optionnel (debug)
