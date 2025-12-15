@@ -2,6 +2,7 @@ import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { sendTransactToDb } from "../dal/requestToDb.js"
+import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 
 export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
