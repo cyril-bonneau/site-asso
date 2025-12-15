@@ -1,4 +1,3 @@
-// backend/auth/getAccessPublicKeyFromSsm.js
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { importSPKI } from "jose";
 

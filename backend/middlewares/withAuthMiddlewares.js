@@ -1,6 +1,6 @@
 import { getAccessPublicKey } from "../auth/getAccessPublicKeyFromSsm.js";
 import { verifyAccessToken } from "../auth/verifyAccessToken.js";
-import { json } from "../helpers/json.js";
+import { json } from "../helpers/toolbox.js";
 
 function getAuthHeader(event) {
     const h = event?.headers || {};
