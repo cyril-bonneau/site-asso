@@ -32,6 +32,8 @@ export function withAuth(handler, opts = {}) {
         const authorization = getAuthHeader(event);
         const token = extractBearerToken(authorization);
 
+        console.info("Authorization header:", authorization);
+        console.info("Extracted token:", token)
         if (!token) {
             return json(401, { ok: false, message: "UNAUTHORIZED", code: "MISSING_BEARER" });
         }
@@ -39,12 +41,14 @@ export function withAuth(handler, opts = {}) {
         let publicKey;
         try {
             publicKey = await getAccessPublicKey();
-        } catch (e) {
-            // Ne leak pas les détails
+            console.log("publicKey", publicKey);
+        } catch (err) {
+            console.error("Error fetching public key:", err);
             return json(500, { ok: false, message: "INTERNAL_ERROR" });
         }
 
         const verified = await verifyAccessToken(token, publicKey, { issuer, audience });
+        console.info("Verified token:", verified);
 
         if (!verified.ok) {
             return json(401, { ok: false, message: "UNAUTHORIZED", code: verified.code });
@@ -60,10 +64,8 @@ export function withAuth(handler, opts = {}) {
         const auth = {
             userId: payload.userId,
             roles: Array.isArray(payload.roles) ? payload.roles : [],
-            // Tu peux rajouter email / globalRoles / assoRoles plus tard
         };
 
-        // On passe auth en 3e param (propre, pas dépendant d’API Gateway)
         return handler(event, context, { auth, jwt: { payload } });
     };
 }

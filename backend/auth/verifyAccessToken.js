@@ -14,11 +14,16 @@ export async function verifyAccessToken(token, publicKey, opts = {}) {
     try {
         const { issuer, audience } = opts;
 
+        console.log("Verifying token with options:", { issuer, audience });
+
         const { payload, protectedHeader } = await jwtVerify(token, publicKey, {
             algorithms: ["RS256"],
             issuer: issuer || undefined,
             audience: audience || undefined,
         });
+
+        console.log("Token payload:", payload);
+        console.log("Token protectedHeader:", protectedHeader);
 
         if (!payload?.userId || typeof payload.userId !== "string") {
             return { ok: false, code: "TOKEN_PAYLOAD_INVALID" };

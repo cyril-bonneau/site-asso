@@ -1,5 +1,6 @@
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { importSPKI } from "jose";
+import { cache } from "react";
 
 let cachedPublicKey = null;          // KeyLike JOSE
 let cachedPem = null;                // optionnel (debug)
@@ -15,8 +16,13 @@ function getParamName() {
 }
 
 export async function getAccessPublicKey() {
-    if (cachedPublicKey) return cachedPublicKey;
-    if (inflight) return inflight;
+    if (cachedPublicKey) {
+        console.log("cachedPublicKey", cachedPublicKey);
+        return cachedPublicKey;
+    }
+    if (inflight) {
+        return inflight;
+    }
 
     inflight = (async () => {
         const Name = getParamName();
@@ -42,6 +48,7 @@ export async function getAccessPublicKey() {
     })();
 
     try {
+        console.log("inflight fetch for public key", inflight);
         return await inflight;
     } finally {
         inflight = null;
@@ -50,5 +57,6 @@ export async function getAccessPublicKey() {
 
 // (Optionnel) utile en test ou debug
 export function _dangerouslyGetCachedPem() {
+    console.log("cachedPem", cachedPem);
     return cachedPem;
 }
