@@ -95,7 +95,7 @@ async function getRefreshTokenData(refreshToken) {
             refreshToken,
             REFRESH_JWT_HMAC,
             {
-                algorithms: ['PS256'],
+                algorithms: ['RS256'],
                 // issuer: 'site-asso/api',
                 // audience: 'site-asso/frontend',
             }

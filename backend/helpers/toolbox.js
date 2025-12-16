@@ -62,7 +62,7 @@ export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
         expiredAt: nowSec + (10 * 24 * 60 * 60) // 10 jours
     };
     const refreshToken = await new SignJWT(refreshTokenPayload)
-        .setProtectedHeader({ alg: "PS256" })
+        .setProtectedHeader({ alg: "RS256" })
         .sign(REFRESH_JWT_HMAC);
     return refreshToken;
 }

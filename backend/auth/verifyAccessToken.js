@@ -17,7 +17,7 @@ export async function verifyAccessToken(token, publicKey, opts = {}) {
         console.log("Verifying token with options:", { issuer, audience });
 
         const { payload, protectedHeader } = await jwtVerify(token, publicKey, {
-            algorithms: ["PS256"],
+            algorithms: ["RS256"],
             issuer: issuer || undefined,
             audience: audience || undefined,
         });

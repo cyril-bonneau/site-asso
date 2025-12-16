@@ -38,8 +38,7 @@ export async function getAccessPublicKey() {
             throw new Error("SSM_PUBLIC_KEY_MISSING");
         }
 
-        // PEM -> KeyLike (JOSE)
-        const key = await importSPKI(pem, "PS256");
+        const key = await importSPKI(pem, "RS256");
 
         cachedPublicKey = key;
         cachedPem = pem;
