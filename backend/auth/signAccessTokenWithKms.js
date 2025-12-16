@@ -14,7 +14,7 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
     const exp = now + expiresIn;
 
     const header = {
-        alg: "RS256",
+        alg: "PS256",
         typ: "JWT"
     }
 

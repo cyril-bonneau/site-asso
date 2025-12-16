@@ -52,6 +52,7 @@ export function buildRefreshCookie(refreshToken) {
     return `refreshToken=${refreshToken}; HttpOnly;${securePart} SameSite=${sameSite}; Path=/; Max-Age=${maxAgeSec}`;
 }
 
+// algo must be HS256 or other symmetric algorithm
 export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
     const nowSec = Math.floor(Date.now() / 1000);
     const refreshTokenPayload = {
@@ -62,7 +63,7 @@ export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
         expiredAt: nowSec + (10 * 24 * 60 * 60) // 10 jours
     };
     const refreshToken = await new SignJWT(refreshTokenPayload)
-        .setProtectedHeader({ alg: "RS256" })
+        .setProtectedHeader({ alg: "HS256" })
         .sign(REFRESH_JWT_HMAC);
     return refreshToken;
 }

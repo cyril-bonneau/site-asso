@@ -89,13 +89,14 @@ function getRefreshTokenFromEvent(event) {
     return parsed.refreshToken ?? null;
 }
 
+// algo must be HS256 or other symmetric algorithm
 async function getRefreshTokenData(refreshToken) {
     try {
         const { payload } = await jwtVerify(
             refreshToken,
             REFRESH_JWT_HMAC,
             {
-                algorithms: ['RS256'],
+                algorithms: ['HS256'],
                 // issuer: 'site-asso/api',
                 // audience: 'site-asso/frontend',
             }
