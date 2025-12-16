@@ -39,7 +39,7 @@ export async function getAccessPublicKey() {
         }
 
         // PEM -> KeyLike (JOSE)
-        const key = await importSPKI(pem, "RS256");
+        const key = await importSPKI(pem, "PS256");
 
         cachedPublicKey = key;
         cachedPem = pem;
