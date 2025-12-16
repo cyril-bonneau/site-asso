@@ -47,6 +47,8 @@ export function withAuth(handler, opts = {}) {
             return json(500, { ok: false, message: "INTERNAL_ERROR" });
         }
 
+        console.log("public key", publicKey);
+        console.log("Verifying token:", token);
         const verified = await verifyAccessToken(token, publicKey, { issuer, audience });
         console.info("Verified token:", verified);
 

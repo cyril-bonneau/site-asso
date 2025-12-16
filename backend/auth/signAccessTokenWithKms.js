@@ -35,7 +35,7 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
             KeyId: keyId,
             Message: dataToSign,
             MessageType: "RAW",
-            SigningAlgorithm: "RSASSA_PSS_SHA_256",
+            SigningAlgorithm: "RSASSA_PKCS1_V1_5_SHA_256",
         })
     );
 
