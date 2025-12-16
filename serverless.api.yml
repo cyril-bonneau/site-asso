@@ -166,7 +166,7 @@ functions:
         Action:
           - ssm:GetParameter
         Resource:
-          - ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
 
     events:
       - httpApi: 
