@@ -1,10 +1,15 @@
 import { checkPasswordByUserId } from "../dal/checkPasswordByUserId.js";
 import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
+import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
-export const handler = async (event) => {
+export const handler = withAuth(handlerCore, {
+    requiredRoles: ["USER"],
+})
+
+async function handlerCore(event) {
     let data
     try {
 
