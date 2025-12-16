@@ -58,8 +58,11 @@ export function withAuth(handler, opts = {}) {
 
         const { payload } = verified;
 
+        console.log("Token payload after verification:", payload);
+        console.log("Required roles:", requiredRoles);
+
         // roles optionnels
-        if (requiredRoles?.length && !hasAnyRole(payload.roles, requiredRoles)) {
+        if (requiredRoles?.length && !hasAnyRole(payload.privilege, requiredRoles)) {
             return json(403, { ok: false, message: "FORBIDDEN" });
         }
 
