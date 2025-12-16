@@ -194,6 +194,12 @@ functions:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
     events:
       - httpApi: 
           method: PATCH
@@ -213,6 +219,12 @@ functions:
           - dynamodb:GetItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
     events:
       - httpApi:
           method: DELETE
