@@ -64,6 +64,7 @@ async function registerUserCore(event) {
         const userId = res.userId;
         const payload = { userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
+        console.log("accessToken", accessToken)
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = buildUserRegisterDetail({ email, firstName, lastName, userId, privilege });
@@ -181,14 +182,17 @@ async function createAuthEntry(email, password) {
                     code: r.Code,
                     message: r.Message,
                 }));
+                console.log("createAuthEntry cancellation reasons", reasons)
 
                 const emailCheck = reasons.find(r => r.index === 0);
+                console.log("emailCheck", emailCheck)
 
                 if (emailCheck && emailCheck.code === "ConditionalCheckFailed") {
                     return { statusCode: 409, error: "EMAIL_ALREADY_EXISTS" }
                 }
 
                 const checkId = reasons.find(r => r.index === 1);
+                console.log("checkId", checkId)
 
                 if (checkId && checkId.code === "ConditionalCheckFailed") {
                     console.error("ID_COLLISION RETRYING...");

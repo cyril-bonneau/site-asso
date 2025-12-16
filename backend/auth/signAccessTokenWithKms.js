@@ -1,6 +1,5 @@
 import { KMSClient, SignCommand } from "@aws-sdk/client-kms";
 import { toBase64Url } from "../helpers/toolbox.js";
-import { signAccessToken } from "../dal/requestToKms.js";
 
 const region = process.env.AWS_REGION || "eu-west-3";
 const keyId = process.env.KMS_JWT_KEY_ID;
