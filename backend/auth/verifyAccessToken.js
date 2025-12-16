@@ -31,6 +31,7 @@ export async function verifyAccessToken(token, publicKey, opts = {}) {
 
         return { ok: true, payload, protectedHeader };
     } catch (err) {
+        console.log("Error verifying token:", err);
         return { ok: false, ...mapJoseError(err) };
     }
 }
