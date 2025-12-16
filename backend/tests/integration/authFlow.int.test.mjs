@@ -167,6 +167,8 @@ describe("Parcours complet Auth (intégration)", () => {
         let response = decode(payload.Payload);
 
         console.log("UpdateAuthUserPassword Lambda response:", response);
+        console.log("access token", accessToken);
+        console.log("refresh token", refreshToken);
 
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
