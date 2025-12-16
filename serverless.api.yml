@@ -161,6 +161,13 @@ functions:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
+
     events:
       - httpApi: 
           method: PATCH
