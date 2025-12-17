@@ -2,8 +2,13 @@ import { json } from "../helpers/toolbox.js";
 import { normalizeEmail } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { sendTransactToDb } from "../dal/requestToDb.js"
+import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 
-export const handler = async (event) => {
+export const handler = withAuth(handlerCore, {
+    requiredRoles: ["USER"],
+})
+
+async function handlerCore(event) {
     try {
         const userId = event?.queryStringParameters?.id;
 

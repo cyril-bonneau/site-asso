@@ -1,8 +1,8 @@
 import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
-import { normalizeEmail, hashRefreshToken, json, buildRefreshCookie, generateRefreshToken } from "../helpers/toolbox.js";
+import { normalizeEmail, json } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
-import { storeRefreshToken } from "../dal/tokenStore.js";
+import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 import crypto from "crypto";
 
 export const handler = withRateLimit(handlerCore, {
@@ -52,25 +52,9 @@ async function loginCore({ email, password }) {
         const payload = { userId, email: normalizeEmail(email), privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
-        console.log("accessToken", accessToken)
+        // console.log("accessToken", accessToken)
 
-        const refreshToken = await generateRefreshToken(userId, REFRESH_JWT_HMAC);
-
-        console.log("refreshToken", refreshToken)
-
-        const hashedRefreshToken = hashRefreshToken(refreshToken);
-
-        console.log("hashedRefreshToken", hashedRefreshToken)
-
-        const res = await storeRefreshToken(hashedRefreshToken, userId);
-
-        console.log("storeRefreshToken result", res)
-
-        if (res.$metadata.httpStatusCode !== 200) {
-            return json(500, { ok: false, message: "INTERNAL_ERROR" });
-        }
-
-        const cookieString = buildRefreshCookie(refreshToken);
+        const cookieString = await generateNewRefreshToken(userId, REFRESH_JWT_HMAC);
 
         return json(
             200,

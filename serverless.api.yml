@@ -22,6 +22,7 @@ provider:
     AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
     PROJECT_AWS_REGION: ${self:provider.region}
     STAGE: ${sls:stage}
+    JWT_ACCESS_PUB_SSM_PARAM: /site-asso/${sls:stage}/cfg/jwtAccessPub
 
 plugins:
   # - ./backend/node_modules/serverless-esbuild
@@ -142,6 +143,7 @@ functions:
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
+      JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -159,6 +161,13 @@ functions:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
+
     events:
       - httpApi: 
           method: PATCH
@@ -171,6 +180,7 @@ functions:
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
       RATE_LIMIT_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTable}
+      JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -184,6 +194,12 @@ functions:
           - dynamodb:GetItem
           - dynamodb:UpdateItem
         Resource: ${cf:site-asso-infra-${sls:stage}.DdbRateLimitTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
     events:
       - httpApi: 
           method: PATCH
@@ -195,6 +211,7 @@ functions:
     architecture: arm64
     environment:
       AUTH_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAuthTableName}
+      JWT_ACCESS_PUB_PEM: ${ssm:/site-asso/${sls:stage}/cfg/jwtAccessPub}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -202,6 +219,12 @@ functions:
           - dynamodb:GetItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
     events:
       - httpApi:
           method: DELETE

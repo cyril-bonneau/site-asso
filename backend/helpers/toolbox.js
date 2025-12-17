@@ -45,13 +45,14 @@ export function buildRefreshCookie(refreshToken) {
     const stage = process.env.STAGE || "dev";
     const isProd = stage === "prod";
 
-    const maxAgeSec = 30 * 24 * 60 * 60; // 30 jours
+    const maxAgeSec = 10 * 24 * 60 * 60; // 10 jours
     const securePart = isProd ? " Secure;" : "";
     const sameSite = "Lax"; // ou Strict si tu veux être super strict
 
     return `refreshToken=${refreshToken}; HttpOnly;${securePart} SameSite=${sameSite}; Path=/; Max-Age=${maxAgeSec}`;
 }
 
+// algo must be HS256 or other symmetric algorithm
 export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
     const nowSec = Math.floor(Date.now() / 1000);
     const refreshTokenPayload = {
@@ -59,10 +60,19 @@ export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
         // issuer: "site-asso/api",
         // audience: "site-asso/frontend",
         issuedAt: nowSec,
-        expiredAt: nowSec + (30 * 24 * 60 * 60) // 30 jours
+        expiredAt: nowSec + (10 * 24 * 60 * 60) // 10 jours
     };
     const refreshToken = await new SignJWT(refreshTokenPayload)
         .setProtectedHeader({ alg: "HS256" })
         .sign(REFRESH_JWT_HMAC);
     return refreshToken;
+}
+
+export function currentDateFr() {
+    return Intl.DateTimeFormat('fr-FR', {
+        timeZone: 'Europe/Paris',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(new Date());
 }

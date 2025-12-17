@@ -3,11 +3,11 @@ import crypto from "crypto";
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { hashPassword } from "../auth/auth.js";
-import { json, normalizeEmail, buildRefreshCookie, generateRefreshToken, hashRefreshToken } from "../helpers/toolbox.js";
+import { json, normalizeEmail } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
-import { storeRefreshToken } from "../dal/tokenStore.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
+import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
@@ -64,6 +64,7 @@ async function registerUserCore(event) {
         const userId = res.userId;
         const payload = { userId, email, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
+        console.log("accessToken", accessToken)
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = buildUserRegisterDetail({ email, firstName, lastName, userId, privilege });
@@ -72,34 +73,7 @@ async function registerUserCore(event) {
         const resultEvent = await eventBridgePutEvents(eventEntry);
 
         try {
-            const refreshToken = await generateRefreshToken(userId, REFRESH_JWT_HMAC);
-
-            console.log("refreshToken", refreshToken)
-
-            const hashedRefreshToken = hashRefreshToken(refreshToken);
-
-            console.log("hashedRefreshToken", hashedRefreshToken)
-
-            const response = await storeRefreshToken(hashedRefreshToken, userId);
-
-            console.log("storeRefreshToken result", response)
-
-            if (response.$metadata.httpStatusCode !== 200) {
-                console.warn("registerUserCore: storeRefreshToken failed", { response });
-
-                if (!resultEvent.FailedEntryCount) {
-                    return json(
-                        201,
-                        {
-                            ok: true,
-                            userId: userId,
-                            message: res.message
-                        }
-                    );
-                }
-            }
-
-            const cookieString = buildRefreshCookie(refreshToken);
+            const cookieString = await generateNewRefreshToken(userId, REFRESH_JWT_HMAC);
 
             if (!resultEvent.FailedEntryCount) {
                 return json(
@@ -208,14 +182,17 @@ async function createAuthEntry(email, password) {
                     code: r.Code,
                     message: r.Message,
                 }));
+                console.log("createAuthEntry cancellation reasons", reasons)
 
                 const emailCheck = reasons.find(r => r.index === 0);
+                console.log("emailCheck", emailCheck)
 
                 if (emailCheck && emailCheck.code === "ConditionalCheckFailed") {
                     return { statusCode: 409, error: "EMAIL_ALREADY_EXISTS" }
                 }
 
                 const checkId = reasons.find(r => r.index === 1);
+                console.log("checkId", checkId)
 
                 if (checkId && checkId.code === "ConditionalCheckFailed") {
                     console.error("ID_COLLISION RETRYING...");

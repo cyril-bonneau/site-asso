@@ -17,6 +17,8 @@ const TEST_FIRSTNAME = "Jack";
 const TEST_LASTNAME = "Larnaque";
 
 let userId;
+let accessToken;
+let refreshToken;
 
 describe("Parcours complet Auth (intégration)", () => {
     // 1) Création de l’utilisateur
@@ -44,7 +46,11 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.ok).toBe(true);
         expect(response.body.userId).toBeDefined();
         expect(response.body.message).toBe("user successfully created");
-        // expect(response.body.accessToken).toBeDefined();
+        expect(response.body.accessToken).toBeDefined();
+
+        accessToken = response.body.accessToken;
+        refreshToken = response.headers["Set-Cookie"];
+
         console.log("RegisterUser Lambda response body:", response.body.accessToken);
 
         userId = response.body.userId;
@@ -61,19 +67,19 @@ describe("Parcours complet Auth (intégration)", () => {
     // 2) Connexion
     it("devrait permettre de se connecter avec les bons identifiants", async () => {
 
-        const body = {
+        const payload = {
             email: TEST_EMAIL,
             password: TEST_PASSWORD,
         }
 
-        const payload = await client.send(
+        const request = await client.send(
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
-                Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
+                Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(payload) })),
             })
         );
 
-        const response = decode(payload.Payload);
+        const response = decode(request.Payload);
 
         console.log("LoginUser Lambda response:", response);
         console.log("Logged in accessToken:", response.body.accessToken);
@@ -84,6 +90,8 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.statusCode).toBe(200);
         expect(response.body.userId).toBeDefined();
         expect(response.body.ok).toBe(true);
+        expect(response.body.accessToken).toBeDefined();
+        expect(response.headers["Set-Cookie"]).toBeDefined();
         expect(response.body.message).toBe("LOGGED_IN");
 
     });
@@ -98,12 +106,18 @@ describe("Parcours complet Auth (intégration)", () => {
             newEmail: TEST_NEW_EMAIL,
         }
 
+        const headers = {
+            Authorization: `Bearer ${accessToken}`,
+            Cookie: refreshToken,
+        }
+
         const payload = await client.send(
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
-                    body: JSON.stringify(body)
+                    headers: headers,
+                    body: JSON.stringify(body),
                 })),
             })
         );
@@ -134,11 +148,17 @@ describe("Parcours complet Auth (intégration)", () => {
             newPassword: TEST_NEW_PASSWORD,
         }
 
+        const headers = {
+            Authorization: `Bearer ${accessToken}`,
+            Cookie: refreshToken,
+        }
+
         let payload = await client.send(
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUserPassword`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
+                    headers: headers,
                     body: JSON.stringify(body)
                 })),
             })
@@ -147,6 +167,8 @@ describe("Parcours complet Auth (intégration)", () => {
         let response = decode(payload.Payload);
 
         console.log("UpdateAuthUserPassword Lambda response:", response);
+        console.log("access token", accessToken);
+        console.log("refresh token", refreshToken);
 
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
@@ -196,9 +218,15 @@ describe("Parcours complet Auth (intégration)", () => {
 
     // 5) Suppression du user
     it("devrait permettre de supprimer le user", async () => {
+
         const body = {
             email: TEST_NEW_EMAIL,
             password: TEST_NEW_PASSWORD,
+        }
+
+        const headers = {
+            Authorization: `Bearer ${accessToken}`,
+            Cookie: refreshToken,
         }
 
         const payload = await client.send(
@@ -206,7 +234,8 @@ describe("Parcours complet Auth (intégration)", () => {
                 FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
                     queryStringParameters: { id: userId },
-                    body: JSON.stringify(body)
+                    headers: headers,
+                    body: JSON.stringify(body),
                 })),
             })
         );

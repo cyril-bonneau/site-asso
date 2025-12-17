@@ -1,6 +1,5 @@
 import { KMSClient, SignCommand } from "@aws-sdk/client-kms";
 import { toBase64Url } from "../helpers/toolbox.js";
-import { signAccessToken } from "../dal/requestToKms.js";
 
 const region = process.env.AWS_REGION || "eu-west-3";
 const keyId = process.env.KMS_JWT_KEY_ID;
@@ -15,7 +14,7 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
     const exp = now + expiresIn;
 
     const header = {
-        alg: "PS256",
+        alg: "RS256",
         typ: "JWT"
     }
 
@@ -36,7 +35,7 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
             KeyId: keyId,
             Message: dataToSign,
             MessageType: "RAW",
-            SigningAlgorithm: "RSASSA_PSS_SHA_256",
+            SigningAlgorithm: "RSASSA_PKCS1_V1_5_SHA_256",
         })
     );
 

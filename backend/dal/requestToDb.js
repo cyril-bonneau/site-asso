@@ -50,7 +50,7 @@ export async function sendPutToDb(putRequest) {
 
 export async function sendUpdateToDb(updatePasswordResult) {
     try {
-        await ddb.send(new UpdateCommand(updatePasswordResult))
+        return await ddb.send(new UpdateCommand(updatePasswordResult))
     } catch (err) {
         console.error("update failed", err)
         throw err

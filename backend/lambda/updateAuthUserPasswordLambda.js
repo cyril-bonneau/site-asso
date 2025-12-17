@@ -1,9 +1,14 @@
 import { updatePasswordCore } from "../dal/updatePasswordCore.js"
 import { json } from "../helpers/toolbox.js";
+import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 
 import { sendUpdateToDb } from "../dal/requestToDb.js";
 
-export const handler = async (event) => {
+export const handler = withAuth(handlerCore, {
+    requiredRoles: ["USER"],
+})
+
+async function handlerCore(event) {
     try {
         const userId = event?.queryStringParameters?.id;
         if (!userId) {
