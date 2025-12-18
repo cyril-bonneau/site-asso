@@ -17,7 +17,14 @@ export function validateInput(event, schema) {
         return {
             statusCode: 400,
             ok: false,
-            body: { message: "INVALID_INPUT" },
+            body: {
+                message: "INVALID_INPUT",
+                details: result.error.issues.map(i => ({
+                    path: i.path.join(".") || "<root>",
+                    code: i.code,
+                    message: i.message,
+                }))
+            },
         };
     }
     return { ok: true, body: { data: result.data } };
