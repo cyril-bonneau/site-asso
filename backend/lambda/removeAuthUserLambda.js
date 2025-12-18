@@ -2,6 +2,7 @@ import { checkPasswordByUserId } from "../dal/checkPasswordByUserId.js";
 import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
+import { validateInput } from "../zod/validateInput.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 
@@ -10,21 +11,22 @@ export const handler = withAuth(handlerCore, {
 })
 
 async function handlerCore(event) {
-    let data
+
     try {
 
         const id = event?.queryStringParameters?.id;
-        try {
-            data = JSON.parse(event.body)
-        } catch (err) {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" })
+
+        if (!id) {
+            return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
-        const { email, password } = data
+        const input = validateInput(event, removeInputSchema);
 
-        if (!email || !password || !id) {
-            return json(400, { ok: false, message: "MISSING_CRUCIAL_DATA" })
+        if (!input.ok) {
+            return json(input.statusCode, { ok: false, message: input.body.message });
         }
+
+        const { email, password } = input.body.data;
 
         await removeAuthUser(id, email, password);
 

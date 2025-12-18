@@ -1,8 +1,9 @@
 import { updatePasswordCore } from "../dal/updatePasswordCore.js"
 import { json } from "../helpers/toolbox.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
-
 import { sendUpdateToDb } from "../dal/requestToDb.js";
+import { validateInput } from "../zod/validateInput.js";
+import { updatePasswordInputSchema } from "../zod/zodSchema/updatePasswordInputValidation.js";
 
 export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
@@ -15,15 +16,13 @@ async function handlerCore(event) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
-        let data;
-        try {
-            data = JSON.parse(event.body || "{}");
-        } catch {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" });
+        const input = validateInput(event, updatePasswordInputSchema);
+
+        if (!input.ok) {
+            return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const oldPassword = data.oldPassword;
-        const newPassword = data.newPassword
+        const { oldPassword, newPassword } = input.body.data;
 
         const hasPasswordChange =
             oldPassword && newPassword;
@@ -72,9 +71,3 @@ async function passwordManager({
         throw err;
     }
 }
-
-// const updatePassword = withRateLimit(updatePasswordCore, {
-//     scope: "updatePassword",
-//     capacity: 3,
-//     keySelector: ({ userId }) => `USER#${userId}`
-// })

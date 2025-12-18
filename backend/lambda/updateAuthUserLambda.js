@@ -3,6 +3,8 @@ import { normalizeEmail } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { sendTransactToDb } from "../dal/requestToDb.js"
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
+import { validateInput } from "../zod/validateInput.js";
+import { updateUserInputSchema } from "../zod/zodSchema/updateUserInputValidation.js";
 
 export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
@@ -18,16 +20,12 @@ async function handlerCore(event) {
 
         let data;
 
-        try {
-            data = JSON.parse(event.body);
-        } catch {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" });
+        const input = validateInput(event, updateUserInputSchema);
+        if (!input.ok) {
+            return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const oldEmail = data.oldEmail ? normalizeEmail(data.oldEmail) : undefined;
-        const newEmail = data.newEmail ? normalizeEmail(data.newEmail) : undefined;
-        const firstName = data.firstName;
-        const lastName = data.lastName;
+        const { oldEmail, newEmail, firstName, lastName } = input.body.data;
 
         const hasEmailChange =
             oldEmail && newEmail && oldEmail !== newEmail;

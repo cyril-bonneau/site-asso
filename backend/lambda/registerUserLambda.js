@@ -3,11 +3,12 @@ import crypto from "crypto";
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { hashPassword } from "../auth/auth.js";
-import { json, normalizeEmail } from "../helpers/toolbox.js";
+import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
+import { validateInput } from "../zod/validateInput.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
@@ -25,20 +26,14 @@ export const handler = withRateLimit(registerUserCore, {
 
 async function registerUserCore(event) {
     try {
-        let data;
-        try {
-            data = JSON.parse(event.body);
-        } catch (err) {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" })
+        const input = validateInput(event, registerInputSchema);
+
+        if (!input.ok) {
+            return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const email = normalizeEmail(data?.email)
-        const { password, firstName, lastName } = data ?? {}
+        const { email, password, firstName, lastName } = input.body.data;
         const privilege = ["USER"];
-
-        if (!email || !password || !firstName || !lastName) {
-            return json(400, { ok: false, message: "MISSING_REQUIRED_INFO" })
-        }
 
         const check = await validatePasswordBackend(password, {
             email,
