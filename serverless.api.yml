@@ -25,21 +25,20 @@ provider:
     JWT_ACCESS_PUB_SSM_PARAM: /site-asso/${sls:stage}/cfg/jwtAccessPub
 
 plugins:
+  # - ./backend/node_modules/serverless-esbuild
 
-# build:
+# custom:
 #   esbuild:
 #     bundle: true
 #     platform: node
 #     target: node22
-#     format: esm
-#     treeShaking: true        
-#     minify: false
+#     format: cjs            
 #     sourcemap: true
-#     keepNames: true
-#     external: ['aws-sdk']
-#     # mainFields:
-#     #   - module
-#     #   - main
+#     minify: false
+#     external: []
+#     mainFields:
+#       - module
+#       - main
 #     banner:
 #       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
@@ -339,6 +338,6 @@ resources:
 package:
   patterns:
     - '!backend/tests/**'
-    - '!backend/node_modules/**'
     - 'package.json'
     - 'backend/package.json'
+
