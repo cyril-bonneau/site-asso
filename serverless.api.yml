@@ -339,5 +339,4 @@ package:
   patterns:
     - '!backend/tests/**'
     - 'package.json'
-    - 'backend/package.json'
-
+    - 'backend/**'
