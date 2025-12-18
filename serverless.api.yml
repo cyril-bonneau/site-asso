@@ -36,7 +36,7 @@ build:
     minify: false
     sourcemap: true
     keepNames: true
-    external: ['argon2', 'aws-sdk']
+    external: ['aws-sdk']
     # mainFields:
     #   - module
     #   - main
