@@ -36,12 +36,12 @@ build:
     minify: false
     sourcemap: true
     keepNames: true
-    # external: []
+    external: ['argon2', 'aws-sdk']
     # mainFields:
     #   - module
     #   - main
-    # banner:
-    #   js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
+    banner:
+      js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
   registerUser:
