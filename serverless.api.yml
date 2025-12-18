@@ -33,7 +33,7 @@ build:
     platform: node
     target: node22
     format: esm
-    threeShaking: true        
+    treeShaking: true        
     minify: false
     bundlePerFunction: true
     sourcemap: true
