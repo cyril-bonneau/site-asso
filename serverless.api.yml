@@ -26,22 +26,22 @@ provider:
 
 plugins:
 
-build:
-  esbuild:
-    bundle: true
-    platform: node
-    target: node22
-    format: esm
-    treeShaking: true        
-    minify: false
-    sourcemap: true
-    keepNames: true
-    external: ['aws-sdk']
-    # mainFields:
-    #   - module
-    #   - main
-    banner:
-      js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
+# build:
+#   esbuild:
+#     bundle: true
+#     platform: node
+#     target: node22
+#     format: esm
+#     treeShaking: true        
+#     minify: false
+#     sourcemap: true
+#     keepNames: true
+#     external: ['aws-sdk']
+#     # mainFields:
+#     #   - module
+#     #   - main
+#     banner:
+#       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
   registerUser:
