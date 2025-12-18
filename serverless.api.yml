@@ -339,5 +339,6 @@ resources:
 package:
   patterns:
     - '!backend/tests/**'
+    - '!backend/node_modules/**'
     - 'package.json'
     - 'backend/**'
