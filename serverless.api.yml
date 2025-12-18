@@ -25,7 +25,6 @@ provider:
     JWT_ACCESS_PUB_SSM_PARAM: /site-asso/${sls:stage}/cfg/jwtAccessPub
 
 plugins:
-  # - ./backend/node_modules/serverless-esbuild
 
 build:
   esbuild:
@@ -35,9 +34,8 @@ build:
     format: esm
     treeShaking: true        
     minify: false
-    bundlePerFunction: true
     sourcemap: true
-    keepNames: false
+    keepNames: true
     # external: []
     # mainFields:
     #   - module
