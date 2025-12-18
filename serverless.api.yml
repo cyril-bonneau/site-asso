@@ -341,4 +341,4 @@ package:
     - '!backend/tests/**'
     - '!backend/node_modules/**'
     - 'package.json'
-    - 'backend/**'
+    - 'backend/package.json'
