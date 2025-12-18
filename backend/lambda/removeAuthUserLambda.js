@@ -3,6 +3,7 @@ import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 import { validateInput } from "../zod/validateInput.js";
+import { removeInputSchema } from "../zod/zodSchema/removeInputValidation.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 

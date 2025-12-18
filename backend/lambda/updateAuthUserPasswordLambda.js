@@ -3,7 +3,7 @@ import { json } from "../helpers/toolbox.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 import { sendUpdateToDb } from "../dal/requestToDb.js";
 import { validateInput } from "../zod/validateInput.js";
-import { updatePasswordInputSchema } from "../zod/zodSchema/updatePasswordInputValidation.js";
+import { passwordUpdateInputSchema } from "../zod/zodSchema/updatePasswordInputValidation.js";
 
 export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
@@ -16,7 +16,7 @@ async function handlerCore(event) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
-        const input = validateInput(event, updatePasswordInputSchema);
+        const input = validateInput(event, passwordUpdateInputSchema);
 
         if (!input.ok) {
             return json(input.statusCode, { ok: false, message: input.body.message });

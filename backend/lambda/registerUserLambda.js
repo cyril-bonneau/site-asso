@@ -9,6 +9,7 @@ import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 import { validateInput } from "../zod/validateInput.js";
+import { registerInputSchema } from "../zod/zodSchema/registerInputValidation.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;

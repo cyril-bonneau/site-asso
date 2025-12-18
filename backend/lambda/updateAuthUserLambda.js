@@ -1,10 +1,9 @@
 import { json } from "../helpers/toolbox.js";
-import { normalizeEmail } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { sendTransactToDb } from "../dal/requestToDb.js"
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 import { validateInput } from "../zod/validateInput.js";
-import { updateUserInputSchema } from "../zod/zodSchema/updateUserInputValidation.js";
+import { updateInputSchema } from "../zod/zodSchema/updateInputValidation.js";
 
 export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
@@ -18,9 +17,7 @@ async function handlerCore(event) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
-        let data;
-
-        const input = validateInput(event, updateUserInputSchema);
+        const input = validateInput(event, updateInputSchema);
         if (!input.ok) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
