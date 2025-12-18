@@ -27,20 +27,20 @@ provider:
 plugins:
   # - ./backend/node_modules/serverless-esbuild
 
-# custom:
-#   esbuild:
-#     bundle: true
-#     platform: node
-#     target: node22
-#     format: cjs            
-#     sourcemap: true
-#     minify: false
-#     external: []
-#     mainFields:
-#       - module
-#       - main
-#     banner:
-#       js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
+build:
+  esbuild:
+    bundle: true
+    platform: node
+    target: node22
+    format: esm            
+    sourcemap: true
+    minify: false
+    # external: []
+    # mainFields:
+    #   - module
+    #   - main
+    # banner:
+    #   js: "import { createRequire } from 'module'; global.require = createRequire(import.meta.url);"
 
 functions:
   registerUser:
