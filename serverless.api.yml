@@ -32,9 +32,12 @@ build:
     bundle: true
     platform: node
     target: node22
-    format: esm            
-    sourcemap: true
+    format: esm
+    threeShaking: true        
     minify: false
+    bundlePerFunction: true
+    sourcemap: true
+    keepNames: false
     # external: []
     # mainFields:
     #   - module
