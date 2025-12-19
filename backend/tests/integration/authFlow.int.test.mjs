@@ -100,7 +100,6 @@ describe("Parcours complet Auth (intégration)", () => {
     it("devrait permettre de mettre à jour le profil user", async () => {
 
         const body = {
-            oldEmail: TEST_EMAIL,
             newEmail: TEST_NEW_EMAIL,
             firstName: TEST_FIRSTNAME,
             lastName: TEST_LASTNAME,
