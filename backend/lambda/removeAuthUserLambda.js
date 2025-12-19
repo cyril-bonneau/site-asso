@@ -25,12 +25,14 @@ async function handlerCore(event, context, { auth }) {
 
         try {
             email = await getEmailByUserId(userId);
+            console.log("email", email);
         } catch (err) {
             console.error("Error fetching email by userId:", err);
             return json(400, { ok: false, message: "USER_NOT_FOUND" });
         }
 
         const input = validateInput(event, removeInputSchema);
+        console.log("input", input);
 
         if (!input.ok) {
             return json(input.statusCode, { ok: false, message: input.body.message });
@@ -57,6 +59,9 @@ async function removeAuthUser(userId, email, password) {
     const skAuth = "AUTH"
     const pkEmail = `EMAIL#${email}`
     const skEmail = "UNIQUE"
+
+    console.log("pkAuth", pkAuth);
+    console.log("pkEmail", pkEmail);
 
     const test = await checkPasswordByUserId({ password, userId })
 
