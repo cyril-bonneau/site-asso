@@ -30,7 +30,7 @@ async function getAuthByEmail(email) {
     try {
         const res = await queryDb({
             TableName: AUTH_TABLE,
-            IndexName: "GSI1v5",
+            IndexName: "GSI1v6",
             KeyConditionExpression: "GSI1PK = :pk",
             ExpressionAttributeValues: {
                 ":pk": `EMAIL#${email}`,
