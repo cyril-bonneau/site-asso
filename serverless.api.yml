@@ -222,6 +222,12 @@ functions:
 
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
           - ssm:GetParameter
         Resource:
           - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
