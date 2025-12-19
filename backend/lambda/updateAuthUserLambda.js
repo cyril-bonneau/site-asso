@@ -1,6 +1,7 @@
 import { json } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { sendTransactToDb } from "../dal/requestToDb.js"
+import { getEmailByUserId } from "../dal/getEmailByUserId.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 import { validateInput } from "../zod/validateInput.js";
 import { updateInputSchema } from "../zod/zodSchema/updateInputValidation.js";
@@ -11,13 +12,22 @@ export const handler = withAuth(handlerCore, {
 
 async function handlerCore(event, context, { auth }) {
     try {
-        const { userId, email } = auth;
+        const { userId } = auth;
+        let email;
 
-        if (!userId || !email) {
-            return json(400, { ok: false, message: "MISSING_USER_ID_OR_EMAIL" });
+        try {
+            email = await getEmailByUserId(userId);
+        } catch (err) {
+            console.error("Error fetching email by userId:", err);
+            return json(400, { ok: false, message: "USER_NOT_FOUND" });
+        }
+
+        if (!userId) {
+            return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
         const input = validateInput(event, updateInputSchema);
+
         if (!input.ok) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }

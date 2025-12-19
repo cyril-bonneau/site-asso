@@ -5,7 +5,8 @@ import {
     UpdateCommand,
     DeleteCommand,
     PutCommand,
-    GetCommand
+    GetCommand,
+    QueryCommand
 } from "@aws-sdk/lib-dynamodb";
 
 export const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -62,6 +63,17 @@ export async function removeFromDb(removeRequest) {
         await ddb.send(new DeleteCommand(removeRequest))
     } catch (err) {
         console.log("error while removing data", err)
+        throw err
+    }
+}
+
+export async function queryDb(queryRequest) {
+    try {
+        const res = await ddb.send(new QueryCommand(queryRequest))
+        console.log("queryDb result", res)
+        return res.Items
+    } catch (err) {
+        console.log("error while querying data", err)
         throw err
     }
 }

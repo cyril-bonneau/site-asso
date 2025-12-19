@@ -1,6 +1,7 @@
 import { checkPasswordByUserId } from "../dal/checkPasswordByUserId.js";
 import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
+import { getEmailByUserId } from "../dal/getEmailByUserId.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 import { validateInput } from "../zod/validateInput.js";
 import { removeInputSchema } from "../zod/zodSchema/removeInputValidation.js";
@@ -14,11 +15,19 @@ export const handler = withAuth(handlerCore, {
 async function handlerCore(event, context, { auth }) {
 
     try {
+        const { userId } = auth;
 
-        const { userId, email } = auth;
+        if (!userId) {
+            return json(400, { ok: false, message: "MISSING_USER_ID" });
+        }
 
-        if (!userId || !email) {
-            return json(400, { ok: false, message: "MISSING_USER_ID_OR_EMAIL" });
+        let email;
+
+        try {
+            email = await getEmailByUserId(userId);
+        } catch (err) {
+            console.error("Error fetching email by userId:", err);
+            return json(400, { ok: false, message: "USER_NOT_FOUND" });
         }
 
         const input = validateInput(event, removeInputSchema);
