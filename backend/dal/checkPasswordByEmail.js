@@ -1,8 +1,4 @@
-import {
-    GetCommand,
-    QueryCommand
-} from "@aws-sdk/lib-dynamodb";
-import { ddb } from "./requestToDb.js";
+import { getFromDb, queryDb } from "./requestToDb.js";
 
 import { verifyPassword } from "../auth/auth.js";
 
@@ -32,21 +28,19 @@ export async function checkPasswordByEmail({ password, email }) {
 
 async function getAuthByEmail(email) {
     try {
-        const res = await ddb.send(
-            new QueryCommand({
-                TableName: AUTH_TABLE,
-                IndexName: "GSI1v6",
-                KeyConditionExpression: "GSI1PK = :pk",
-                ExpressionAttributeValues: {
-                    ":pk": `EMAIL#${email}`,
-                },
-                ProjectionExpression: "passwordHash, userId",
-            })
-        )
-        console.log("getAuthByEmail result:", res.Items[0]);
-        res.Items[0].privilege = await getPrivilegeByUserId(res.Items[0].userId)
-        console.log("getAuthByEmail result 2:", res.Items[0]);
-        return res.Items[0]
+        const res = await queryDb({
+            TableName: AUTH_TABLE,
+            IndexName: "GSI1v5",
+            KeyConditionExpression: "GSI1PK = :pk",
+            ExpressionAttributeValues: {
+                ":pk": `EMAIL#${email}`,
+            },
+            ProjectionExpression: "passwordHash, userId",
+        })
+        console.log("getAuthByEmail result:", res[0]);
+        res[0].privilege = await getPrivilegeByUserId(res[0].userId)
+        console.log("getAuthByEmail result 2:", res[0]);
+        return res[0]
     } catch (err) {
         return err
     }
@@ -54,18 +48,16 @@ async function getAuthByEmail(email) {
 
 async function getPrivilegeByUserId(userId) {
     try {
-        const res = await ddb.send(
-            new GetCommand({
-                TableName: USER_TABLE,
-                Key: {
-                    "PK": `USER#${userId}`,
-                    "SK": `PROFILE#${userId}`
-                },
-                ProjectionExpression: "privilege",
-            })
-        )
-        console.log("getPrivilegeByUserId result:", res.Item.privilege[0]);
-        return res.Item.privilege[0]
+        const res = await getFromDb({
+            TableName: USER_TABLE,
+            Key: {
+                "PK": `USER#${userId}`,
+                "SK": `PROFILE#${userId}`
+            },
+            ProjectionExpression: "privilege",
+        })
+        console.log("getPrivilegeByUserId result:", res.privilege[0]);
+        return res.privilege[0]
     } catch (err) {
         console.error("getPrivilegeByUserId error:", err);
         return err

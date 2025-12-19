@@ -100,10 +100,9 @@ describe("Parcours complet Auth (intégration)", () => {
     it("devrait permettre de mettre à jour le profil user", async () => {
 
         const body = {
+            newEmail: TEST_NEW_EMAIL,
             firstName: TEST_FIRSTNAME,
             lastName: TEST_LASTNAME,
-            oldEmail: TEST_EMAIL,
-            newEmail: TEST_NEW_EMAIL,
         }
 
         const headers = {
@@ -220,7 +219,6 @@ describe("Parcours complet Auth (intégration)", () => {
     it("devrait permettre de supprimer le user", async () => {
 
         const body = {
-            email: TEST_NEW_EMAIL,
             password: TEST_NEW_PASSWORD,
         }
 
@@ -233,7 +231,6 @@ describe("Parcours complet Auth (intégration)", () => {
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
                 Payload: Buffer.from(JSON.stringify({
-                    queryStringParameters: { id: userId },
                     headers: headers,
                     body: JSON.stringify(body),
                 })),

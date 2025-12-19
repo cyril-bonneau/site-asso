@@ -3,6 +3,8 @@ import { normalizeEmail, json } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
+import { validateInput } from "../zod/validateInput.js";
+import { loginInputSchema } from "../zod/zodSchema/loginInputValidation.js";
 import crypto from "crypto";
 
 export const handler = withRateLimit(handlerCore, {
@@ -17,18 +19,13 @@ const REFRESH_JWT_HMAC = crypto
 
 async function handlerCore(event) {
     try {
-        let data;
-        try {
-            data = JSON.parse(event.body);
-        } catch (err) {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" })
+        const input = validateInput(event, loginInputSchema);
+
+        if (!input.ok) {
+            return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const { email, password } = data
-
-        if (!email || !password) {
-            return json(400, { ok: false, message: "MISSING_CREDENTIALS" })
-        }
+        const { email, password } = input.body.data;
 
         return loginCore({ email, password })
 

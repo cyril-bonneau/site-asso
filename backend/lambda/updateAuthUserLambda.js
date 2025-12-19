@@ -1,36 +1,41 @@
 import { json } from "../helpers/toolbox.js";
-import { normalizeEmail } from "../helpers/toolbox.js";
 import { addUserProfileUpdateOperation } from "../dal/addUserProfileUpdateOperation.js"
 import { sendTransactToDb } from "../dal/requestToDb.js"
+import { getEmailByUserId } from "../dal/getEmailByUserId.js";
 import { withAuth } from "../middlewares/withAuthMiddlewares.js";
+import { validateInput } from "../zod/validateInput.js";
+import { updateInputSchema } from "../zod/zodSchema/updateInputValidation.js";
 
 export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
 })
 
-async function handlerCore(event) {
+async function handlerCore(event, context, { auth }) {
     try {
-        const userId = event?.queryStringParameters?.id;
+        const { userId } = auth;
+        let email;
+
+        try {
+            email = await getEmailByUserId(userId);
+        } catch (err) {
+            console.error("Error fetching email by userId:", err);
+            return json(400, { ok: false, message: "USER_NOT_FOUND" });
+        }
 
         if (!userId) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
 
-        let data;
+        const input = validateInput(event, updateInputSchema);
 
-        try {
-            data = JSON.parse(event.body);
-        } catch {
-            return json(400, { ok: false, message: "INVALID_JSON_BODY" });
+        if (!input.ok) {
+            return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const oldEmail = data.oldEmail ? normalizeEmail(data.oldEmail) : undefined;
-        const newEmail = data.newEmail ? normalizeEmail(data.newEmail) : undefined;
-        const firstName = data.firstName;
-        const lastName = data.lastName;
+        const { newEmail, firstName, lastName } = input.body.data;
 
         const hasEmailChange =
-            oldEmail && newEmail && oldEmail !== newEmail;
+            newEmail && email !== newEmail;
         const hasProfileChange =
             firstName !== undefined || lastName !== undefined;
 
@@ -40,7 +45,7 @@ async function handlerCore(event) {
 
         return await updateUserTransactional({
             userId,
-            oldEmail,
+            oldEmail: email,
             newEmail,
             firstName,
             lastName,
