@@ -15,9 +15,9 @@ async function handlerCore(event, context, { auth }) {
 
     try {
 
-        const { id, email } = auth;
+        const { userId, email } = auth;
 
-        if (!id || !email) {
+        if (!userId || !email) {
             return json(400, { ok: false, message: "MISSING_USER_ID_OR_EMAIL" });
         }
 
@@ -29,7 +29,7 @@ async function handlerCore(event, context, { auth }) {
 
         const { password } = input.body.data;
 
-        await removeAuthUser(id, email, password);
+        await removeAuthUser(userId, email, password);
 
         return json(200, { ok: true, message: "User removed" });
 

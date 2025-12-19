@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const updateInputSchema = z.object({
-    oldEmail: z.string().email().trim().toLowerCase().optional(),
     newEmail: z.string().email().trim().toLowerCase().optional(),
     lastName: z.string().trim().min(1).max(50).optional(),
     firstName: z.string().trim().min(1).max(50).optional(),

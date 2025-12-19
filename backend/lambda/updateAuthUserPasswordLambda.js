@@ -9,9 +9,10 @@ export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
 })
 
-async function handlerCore(event) {
+async function handlerCore(event, context, { auth }) {
     try {
-        const userId = event?.queryStringParameters?.id;
+        const { userId } = auth;
+
         if (!userId) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
@@ -24,14 +25,9 @@ async function handlerCore(event) {
 
         const { oldPassword, newPassword } = input.body.data;
 
-        const hasPasswordChange =
-            oldPassword && newPassword;
-
-        if ((oldPassword !== undefined) !== (newPassword !== undefined)) {
+        if (oldPassword !== undefined || newPassword !== undefined) {
             return json(400, { ok: false, message: "MISSING_PASSWORD_FIELDS" });
-        }
-
-        if (!hasPasswordChange) {
+        } else if (oldPassword === newPassword) {
             return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
         }
 

@@ -9,12 +9,12 @@ export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
 })
 
-async function handlerCore(event) {
+async function handlerCore(event, context, { auth }) {
     try {
-        const userId = event?.queryStringParameters?.id;
+        const { userId, email } = auth;
 
-        if (!userId) {
-            return json(400, { ok: false, message: "MISSING_USER_ID" });
+        if (!userId || !email) {
+            return json(400, { ok: false, message: "MISSING_USER_ID_OR_EMAIL" });
         }
 
         const input = validateInput(event, updateInputSchema);
@@ -22,10 +22,10 @@ async function handlerCore(event) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const { oldEmail, newEmail, firstName, lastName } = input.body.data;
+        const { newEmail, firstName, lastName } = input.body.data;
 
         const hasEmailChange =
-            oldEmail && newEmail && oldEmail !== newEmail;
+            newEmail && email !== newEmail;
         const hasProfileChange =
             firstName !== undefined || lastName !== undefined;
 
@@ -35,7 +35,7 @@ async function handlerCore(event) {
 
         return await updateUserTransactional({
             userId,
-            oldEmail,
+            oldEmail: email,
             newEmail,
             firstName,
             lastName,
