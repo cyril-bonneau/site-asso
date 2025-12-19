@@ -1,5 +1,4 @@
-import { GetCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb, getFromDb } from "../dal/requestToDb.js";
+import { getFromDb } from "../dal/requestToDb.js";
 
 const USER_TABLE = process.env.USER_TABLE;
 

@@ -37,10 +37,10 @@ async function getAuthByEmail(email) {
             },
             ProjectionExpression: "passwordHash, userId",
         })
-        console.log("getAuthByEmail result:", res.Items[0]);
-        res.Items[0].privilege = await getPrivilegeByUserId(res.Items[0].userId)
-        console.log("getAuthByEmail result 2:", res.Items[0]);
-        return res.Items[0]
+        console.log("getAuthByEmail result:", res[0]);
+        res[0].privilege = await getPrivilegeByUserId(res[0].userId)
+        console.log("getAuthByEmail result 2:", res[0]);
+        return res[0]
     } catch (err) {
         return err
     }
