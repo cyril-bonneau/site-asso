@@ -68,6 +68,7 @@ export function withAuth(handler, opts = {}) {
 
         const auth = {
             userId: payload.userId,
+            email: payload.email,
             roles: Array.isArray(payload.roles) ? payload.roles : [],
         };
 

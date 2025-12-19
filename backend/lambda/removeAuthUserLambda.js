@@ -11,14 +11,14 @@ export const handler = withAuth(handlerCore, {
     requiredRoles: ["USER"],
 })
 
-async function handlerCore(event) {
+async function handlerCore(event, context, { auth }) {
 
     try {
 
-        const id = event?.queryStringParameters?.id;
+        const { id, email } = auth;
 
-        if (!id) {
-            return json(400, { ok: false, message: "MISSING_USER_ID" });
+        if (!id || !email) {
+            return json(400, { ok: false, message: "MISSING_USER_ID_OR_EMAIL" });
         }
 
         const input = validateInput(event, removeInputSchema);
@@ -27,7 +27,7 @@ async function handlerCore(event) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const { email, password } = input.body.data;
+        const { password } = input.body.data;
 
         await removeAuthUser(id, email, password);
 
