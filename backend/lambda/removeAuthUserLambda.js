@@ -24,8 +24,8 @@ async function handlerCore(event, context, { auth }) {
         let email;
 
         try {
-            email = await getEmailByUserId(userId);
-            console.log("email", email);
+            const res = await getEmailByUserId(userId);
+            email = res.email;
         } catch (err) {
             console.error("Error fetching email by userId:", err);
             return json(400, { ok: false, message: "USER_NOT_FOUND" });
