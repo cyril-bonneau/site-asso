@@ -25,9 +25,7 @@ async function handlerCore(event, context, { auth }) {
 
         const { oldPassword, newPassword } = input.body.data;
 
-        if (oldPassword !== undefined || newPassword !== undefined) {
-            return json(400, { ok: false, message: "MISSING_PASSWORD_FIELDS" });
-        } else if (oldPassword === newPassword) {
+        if (oldPassword === newPassword) {
             return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
         }
 
