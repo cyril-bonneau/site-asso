@@ -10,7 +10,7 @@ const ssm = new SSMClient({});
 function getParamName() {
     if (process.env.JWT_ACCESS_PUB_SSM_PARAM) return process.env.JWT_ACCESS_PUB_SSM_PARAM;
 
-    const stage = process.env.STAGE || process.env.NODE_ENV || "dev";
+    const stage = process.env.STAGE || "dev";
     return `/site-asso/${stage}/cfg/jwtAccessPub`;
 }
 
