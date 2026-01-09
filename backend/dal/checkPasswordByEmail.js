@@ -56,8 +56,8 @@ async function getPrivilegeByUserId(userId) {
             },
             ProjectionExpression: "privilege",
         })
-        console.log("getPrivilegeByUserId result:", res.privilege[0]);
-        return res.privilege[0]
+        console.log("getPrivilegeByUserId result:", res.privilege);
+        return res.privilege
     } catch (err) {
         console.error("getPrivilegeByUserId error:", err);
         return err
