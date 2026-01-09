@@ -39,7 +39,7 @@ async function loginCore({ email, password }) {
 
     try {
 
-        const { check, userId = undefined, privilege = undefined } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
+        const { check, userId, privilege } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
 
         console.log("privilege", privilege)
         if (!check) {
