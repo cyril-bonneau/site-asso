@@ -70,7 +70,6 @@ export async function removeFromDb(removeRequest) {
 export async function queryDb(queryRequest) {
     try {
         const res = await ddb.send(new QueryCommand(queryRequest))
-        console.log("queryDb result", res)
         return res.Items
     } catch (err) {
         console.log("error while querying data", err)
