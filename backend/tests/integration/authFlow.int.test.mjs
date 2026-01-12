@@ -233,7 +233,7 @@ describe("Parcours complet Auth (intégration)", () => {
     });
 
     // 5) Suppression du user
-    it("devrait permettre de supprimer le user", async () => {
+    it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
 
         const body = {
             password: TEST_NEW_PASSWORD,
@@ -266,6 +266,6 @@ describe("Parcours complet Auth (intégration)", () => {
         const profileAfterDelete = await getUserProfileByUserId(userId);
         console.log("profileAfterDelete", profileAfterDelete);
         expect(profileAfterDelete).toBeUndefined();
-    }, { timeout: 10_000 });
+    });
 
 });
