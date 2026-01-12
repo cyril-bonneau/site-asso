@@ -259,5 +259,7 @@ resources:
       Export:
         Name: site-asso-infra-${sls:stage}-KmsJwtSigningKeyArn
 
-    AssoLogoBucketName:
-      Value: ${self:custom.assoLogoBucketName}
+    AssoLogoBucket:
+      Value: !GetAtt AssoLogo.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-AssoLogoBucket
