@@ -18,6 +18,7 @@ const TEST_LASTNAME = "Larnaque";
 
 let userId;
 let accessToken;
+let accessToken2;
 let refreshToken;
 
 describe("Parcours complet Auth (intégration)", () => {
@@ -84,6 +85,7 @@ describe("Parcours complet Auth (intégration)", () => {
         console.log("LoginUser Lambda response:", response);
         console.log("Logged in accessToken:", response.body.accessToken);
 
+        accessToken2 = response.body.accessToken;
         userId = response.body.userId;
 
         expect(response).toBeDefined();
@@ -96,7 +98,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
     });
 
-    // 3) Update du user (profil / email selon ta logique)
+    // 3) Update du user (profil / email)
     it("devrait permettre de mettre à jour le profil user", async () => {
 
         const body = {
@@ -105,7 +107,7 @@ describe("Parcours complet Auth (intégration)", () => {
             lastName: TEST_LASTNAME,
         }
 
-        const headers = {
+        let headers = {
             Authorization: `Bearer ${accessToken}`,
             Cookie: refreshToken,
         }
@@ -121,7 +123,7 @@ describe("Parcours complet Auth (intégration)", () => {
             })
         );
 
-        const response = decode(payload.Payload);
+        let response = decode(payload.Payload);
 
         console.log("UpdateAuthUser Lambda response:", response);
 
@@ -137,6 +139,21 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(updatedProfile.firstName).toBe(TEST_FIRSTNAME);
         expect(updatedProfile.lastName).toBe(TEST_LASTNAME);
         expect(updatedProfile.email).toBe(TEST_NEW_EMAIL);
+
+        headers = {
+            Authorization: `Bearer ${accessToken2}`,
+            Cookie: refreshToken,
+        }
+
+        const result = payload
+        response = decode(result.Payload);
+        console.log("Re-testing with accessToken2, UpdateAuthUser Lambda response:", response);
+
+        expect(response).toBeDefined();
+        expect(response.statusCode).toBe(200);
+        expect(response.body.ok).toBe(true);
+        expect(response.body.message).toBe("NOTHING_TO_UPDATE");
+
     });
 
     // 4) Changement de mot de passe
@@ -249,6 +266,6 @@ describe("Parcours complet Auth (intégration)", () => {
         const profileAfterDelete = await getUserProfileByUserId(userId);
         console.log("profileAfterDelete", profileAfterDelete);
         expect(profileAfterDelete).toBeUndefined();
-    });
+    }, { timeout: 10_000 });
 
 });

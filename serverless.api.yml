@@ -329,6 +329,31 @@ functions:
         Resource:
           - Fn::GetAtt: [ AuthStreamDLQ, Arn ]
 
+  addAsso:
+    handler: backend/lambda/addAssoLambda.handler
+    memorySize: 1024
+    architecture: arm64
+    environment:
+      ASSO_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAssoTable}
+      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucketName}
+      # ASSO_MEMBERSHIP_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAssoMembershipTable}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbAssoTableArn}
+          # - ${cf:site-asso-infra-${sls:stage}.DdbAssoMembershipTableArn}
+
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          - arn:aws:s3:::${cf:site-asso-infra-${sls:stage}.AssoLogoBucketName}/*
+    events:
+      - httpApi:
+          method: POST
+
 resources:
   Resources:
     AuthStreamDLQ:

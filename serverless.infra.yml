@@ -113,6 +113,42 @@ resources:
           AttributeName: expiredAt
           Enabled: true
 
+    AssoTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: site-asso-${sls:stage}-asso
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S } #ASSO#xxxxxxxxxxxx
+          - { AttributeName: SK, AttributeType: S } #META
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH }
+          - { AttributeName: SK, KeyType: RANGE }
+        TimeToLiveSpecification:
+          AttributeName: TTL
+          Enabled: true
+
+    AssoMembershipTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: site-asso-${sls:stage}-asso-member
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S } #assoId
+          - { AttributeName: SK, AttributeType: S } #userId
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH } #userId
+          - { AttributeName: SK, KeyType: RANGE } #assoId
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - { AttributeName: PK, KeyType: HASH } #UserId
+              - { AttributeName: SK, KeyType: RANGE } #ASSO#AssoId 
+            Projection: { ProjectionType: ALL }
+        TimeToLiveSpecification:
+          AttributeName: TTL
+          Enabled: true
+
     EventBusSiteAssoRegister:
       Type: AWS::Events::EventBus
       Properties:
@@ -133,6 +169,21 @@ resources:
       Properties:
         AliasName: alias/site-asso-auth-${sls:stage}
         TargetKeyId: !Ref KmsJwtSigningKey
+
+    AssoLogo:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: site-asso-${sls:stage}-asso-logo
+        VersioningConfiguration:
+          Status: Enabled
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
 
   Outputs:
 
@@ -176,6 +227,24 @@ resources:
       Export:
         Name: site-asso-infra-${sls:stage}-DdbTokenTableArn
 
+    DdbAssoTable:
+      Value: !Ref AssoTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAssoTable
+    DdbAssoTableArn:
+      Value: !GetAtt AssoTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAssoTableArn
+
+    DdbAssoMembershipTable:
+      Value: !Ref AssoMembershipTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAssoMembershipTable
+    DdbAssoMembershipTableArn:
+      Value: !GetAtt AssoMembershipTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAssoMembershipTableArn
+
     RegisterEventBusName:
       Value: !Ref EventBusSiteAssoRegister
       Export:
@@ -189,3 +258,6 @@ resources:
       Value: !GetAtt KmsJwtSigningKey.Arn
       Export:
         Name: site-asso-infra-${sls:stage}-KmsJwtSigningKeyArn
+
+    AssoLogoBucketName:
+      Value: ${self:custom.assoLogoBucketName}
