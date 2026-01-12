@@ -353,6 +353,7 @@ functions:
     events:
       - httpApi:
           method: POST
+          path: /addAsso
 
 resources:
   Resources:
