@@ -335,7 +335,7 @@ functions:
     architecture: arm64
     environment:
       ASSO_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAssoTable}
-      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucketName}
+      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}
       # ASSO_MEMBERSHIP_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAssoMembershipTable}
     iamRoleStatements:
       - Effect: Allow
@@ -349,7 +349,7 @@ functions:
         Action:
           - s3:PutObject
         Resource:
-          - arn:aws:s3:::${cf:site-asso-infra-${sls:stage}.AssoLogoBucketName}/*
+          - arn:aws:s3:::${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}/*
     events:
       - httpApi:
           method: POST
