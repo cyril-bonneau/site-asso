@@ -10,7 +10,7 @@ const client = new LambdaClient({ region: "eu-west-3" });
 // email unique à chaque run pour éviter les collisions en dev
 const timestamp = Date.now();
 const TEST_EMAIL = `cyril.bonneau${timestamp}@outlook.com`;
-const TEST_NEW_EMAIL = `cyril.bonneau2${timestamp}@outlook.com`;
+const TEST_NEW_EMAIL = `cyril.bonneauSUCCESS${timestamp}SUCCESS@outlook.com`;
 const TEST_PASSWORD = "Ax9!qL7#vZ3@pT2";
 const TEST_NEW_PASSWORD = "Hy4&nK8@wS6?dR1";
 const TEST_FIRSTNAME = "Jack";
