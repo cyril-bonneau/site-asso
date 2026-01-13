@@ -107,6 +107,8 @@ describe("Parcours complet Auth (intégration)", () => {
             lastName: TEST_LASTNAME,
         }
 
+        console.log('body.newEmail', body.newEmail);
+
         let headers = {
             Authorization: `Bearer ${accessToken}`,
             Cookie: refreshToken,
@@ -146,6 +148,7 @@ describe("Parcours complet Auth (intégration)", () => {
         }
 
         const result = payload
+        console.log('body.newEmail after update', body.newEmail);
         response = decode(result.Payload);
         console.log("Re-testing with accessToken2, UpdateAuthUser Lambda response:", response);
 
