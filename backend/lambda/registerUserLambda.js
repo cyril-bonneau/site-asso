@@ -58,7 +58,7 @@ async function registerUserCore(event) {
         }
 
         const userId = res.userId;
-        const payload = { userId, email, privilege };
+        const payload = { userId, email, privilege: privilege[0] };
         const accessToken = await signAccessTokenWithKms(payload);
         console.log("accessToken", accessToken)
 

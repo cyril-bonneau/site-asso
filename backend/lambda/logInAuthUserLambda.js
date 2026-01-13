@@ -46,7 +46,7 @@ async function loginCore({ email, password }) {
             return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
         }
 
-        const payload = { userId, email: normalizeEmail(email), privilege };
+        const payload = { userId, email: normalizeEmail(email), privilege: privilege[0] };
         const accessToken = await signAccessTokenWithKms(payload);
 
         // console.log("accessToken", accessToken)
