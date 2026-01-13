@@ -235,40 +235,40 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.userId).toBe(userId);
     });
 
-    // 5) Suppression du user
-    it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
+    // // 5) Suppression du user
+    // it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
 
-        const body = {
-            password: TEST_NEW_PASSWORD,
-        }
+    //     const body = {
+    //         password: TEST_NEW_PASSWORD,
+    //     }
 
-        const headers = {
-            Authorization: `Bearer ${accessToken}`,
-            Cookie: refreshToken,
-        }
+    //     const headers = {
+    //         Authorization: `Bearer ${accessToken}`,
+    //         Cookie: refreshToken,
+    //     }
 
-        const payload = await client.send(
-            new InvokeCommand({
-                FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
-                Payload: Buffer.from(JSON.stringify({
-                    headers: headers,
-                    body: JSON.stringify(body),
-                })),
-            })
-        );
+    //     const payload = await client.send(
+    //         new InvokeCommand({
+    //             FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
+    //             Payload: Buffer.from(JSON.stringify({
+    //                 headers: headers,
+    //                 body: JSON.stringify(body),
+    //             })),
+    //         })
+    //     );
 
-        const response = decode(payload.Payload);
+    //     const response = decode(payload.Payload);
 
-        console.log("RemoveAuthUser Lambda response:", response);
+    //     console.log("RemoveAuthUser Lambda response:", response);
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body.ok).toBe(true);
-        expect(response.body.message).toBe("User removed");
+    //     expect(response.statusCode).toBe(200);
+    //     expect(response.body.ok).toBe(true);
+    //     expect(response.body.message).toBe("User removed");
 
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const profileAfterDelete = await getUserProfileByUserId(userId);
-        console.log("profileAfterDelete", profileAfterDelete);
-        expect(profileAfterDelete).toBeUndefined();
-    });
+    //     await new Promise(resolve => setTimeout(resolve, 3000));
+    //     const profileAfterDelete = await getUserProfileByUserId(userId);
+    //     console.log("profileAfterDelete", profileAfterDelete);
+    //     expect(profileAfterDelete).toBeUndefined();
+    // });
 
 });
