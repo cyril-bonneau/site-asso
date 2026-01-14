@@ -23,6 +23,7 @@ provider:
     PROJECT_AWS_REGION: ${self:provider.region}
     STAGE: ${sls:stage}
     JWT_ACCESS_PUB_SSM_PARAM: /site-asso/${sls:stage}/cfg/jwtAccessPub
+    ISSUER: site-asso-${sls:stage}
 
 plugins:
   # - ./backend/node_modules/serverless-esbuild

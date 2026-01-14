@@ -46,7 +46,10 @@ async function loginCore({ email, password }) {
             return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
         }
 
-        const payload = { userId, privilege };
+        const iss = process.env.ISSUER
+        const iat = Math.floor(Date.now() / 1000);
+        const exp = iat + 15 * 60; // 15 minutes
+        const payload = { iss, iat, exp, userId, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
         // console.log("accessToken", accessToken)
