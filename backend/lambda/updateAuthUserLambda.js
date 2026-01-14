@@ -17,6 +17,7 @@ async function handlerCore(event, context, { auth }) {
 
         try {
             email = await getEmailByUserId(userId);
+            console.log('email fetched by userId:', email);
         } catch (err) {
             console.error("Error fetching email by userId:", err);
             return json(400, { ok: false, message: "USER_NOT_FOUND" });
@@ -29,6 +30,7 @@ async function handlerCore(event, context, { auth }) {
         const input = validateInput(event, updateInputSchema);
 
         if (!input.ok) {
+            console.log("Input validation failed:", input.body.message);
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
@@ -69,6 +71,7 @@ async function updateUserTransactional(params) {
         hasEmailChange,
         hasProfileChange,
     } = params;
+    console.log("updateUserTransactional called with:", { oldEmail, newEmail, firstName, lastName, hasEmailChange, hasProfileChange });
 
     const transactItems = [];
 
