@@ -27,6 +27,7 @@ export const handler = withRateLimit(registerUserCore, {
 
 async function registerUserCore(event) {
     try {
+        console.log("registerUserCore event:", event);
         const input = validateInput(event, registerInputSchema);
 
         if (!input.ok) {
@@ -58,7 +59,7 @@ async function registerUserCore(event) {
         }
 
         const userId = res.userId;
-        const payload = { userId, email, privilege };
+        const payload = { userId, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
         console.log("accessToken", accessToken)
 
