@@ -9,7 +9,7 @@ export async function getEmailByUserId(userId) {
             Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
             ProjectionExpression: "email"
         })
-        return Item
+        return Item.email
     } catch (err) {
         return err
     }
