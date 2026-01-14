@@ -16,7 +16,7 @@ async function handlerCore(event, context, { auth }) {
         let email;
 
         try {
-            email = await getEmailByUserId(userId);
+            ({ email } = await getEmailByUserId(userId));
             console.log('email fetched by userId:', email);
         } catch (err) {
             console.error("Error fetching email by userId:", err);
