@@ -7,7 +7,7 @@ export async function getEmailByUserId(userId) {
         const Item = await getFromDb({
             TableName: USER_TABLE,
             Key: { PK: `USER#${userId}`, SK: `PROFILE#${userId}` },
-            ProjectionExpression: "email"
+            ProjectionExpression: "email, firstName, lastName",
         })
         return Item
     } catch (err) {

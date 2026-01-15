@@ -103,8 +103,8 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const body = {
             newEmail: TEST_NEW_EMAIL,
-            firstName: TEST_FIRSTNAME,
-            lastName: TEST_LASTNAME,
+            newFirstName: TEST_FIRSTNAME,
+            newLastName: TEST_LASTNAME,
         }
 
         console.log('body.newEmail', body.newEmail);
@@ -155,6 +155,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
+        console.log("response body message", response.body.message);
         // expect(response.body.message).toBe("NOTHING_TO_UPDATE");
 
     });

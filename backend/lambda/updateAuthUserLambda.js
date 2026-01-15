@@ -16,7 +16,7 @@ async function handlerCore(event, context, { auth }) {
         let email;
 
         try {
-            ({ email } = await getEmailByUserId(userId));
+            ({ email, firstName, lastName } = await getEmailByUserId(userId));
             console.log('email fetched by userId:', email);
         } catch (err) {
             console.error("Error fetching email by userId:", err);
@@ -34,12 +34,12 @@ async function handlerCore(event, context, { auth }) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
 
-        const { newEmail, firstName, lastName } = input.body.data;
+        const { newEmail, newFirstName, newLastName } = input.body.data;
 
         const hasEmailChange =
             newEmail && email !== newEmail;
         const hasProfileChange =
-            firstName !== undefined || lastName !== undefined;
+            (newFirstName !== undefined && firstName !== newFirstName) || (newLastName !== undefined && lastName !== newLastName);
 
         if (!hasEmailChange && !hasProfileChange) {
             return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
