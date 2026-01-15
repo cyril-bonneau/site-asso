@@ -149,9 +149,19 @@ describe("Parcours complet Auth (intégration)", () => {
             Cookie: refreshToken,
         }
 
-        const result = payload
+        const payload2 = await client.send(
+            new InvokeCommand({
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
+                Payload: Buffer.from(JSON.stringify({
+                    queryStringParameters: { id: userId },
+                    headers: headers,
+                    body: JSON.stringify(body),
+                })),
+            })
+        );
+
         console.log('body.newEmail after update', body.newEmail);
-        response = decode(result.Payload);
+        response = decode(payload2.Payload);
         console.log("Re-testing with accessToken2, UpdateAuthUser Lambda response:", response);
 
         expect(response).toBeDefined();
@@ -239,7 +249,7 @@ describe("Parcours complet Auth (intégration)", () => {
     });
 
     // 5) Suppression du user
-    it.skip("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
+    it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
 
         const body = {
             password: TEST_NEW_PASSWORD,
