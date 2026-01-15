@@ -142,19 +142,19 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(updatedProfile.lastName).toBe(TEST_LASTNAME);
         expect(updatedProfile.email).toBe(TEST_NEW_EMAIL);
 
-        // headers = {
-        //     Authorization: `Bearer ${accessToken2}`,
-        //     Cookie: refreshToken,
-        // }
+        headers = {
+            Authorization: `Bearer ${accessToken2}`,
+            Cookie: refreshToken,
+        }
 
-        // const result = payload
-        // console.log('body.newEmail after update', body.newEmail);
-        // response = decode(result.Payload);
-        // console.log("Re-testing with accessToken2, UpdateAuthUser Lambda response:", response);
+        const result = payload
+        console.log('body.newEmail after update', body.newEmail);
+        response = decode(result.Payload);
+        console.log("Re-testing with accessToken2, UpdateAuthUser Lambda response:", response);
 
-        // expect(response).toBeDefined();
-        // expect(response.statusCode).toBe(200);
-        // expect(response.body.ok).toBe(true);
+        expect(response).toBeDefined();
+        expect(response.statusCode).toBe(200);
+        expect(response.body.ok).toBe(true);
         // expect(response.body.message).toBe("NOTHING_TO_UPDATE");
 
     });
