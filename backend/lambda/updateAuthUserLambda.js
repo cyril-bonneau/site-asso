@@ -43,6 +43,8 @@ async function handlerCore(event, context, { auth }) {
         const hasProfileChange =
             (newFirstName !== undefined && firstName !== newFirstName) || (newLastName !== undefined && lastName !== newLastName);
 
+        console.log("hasEmailChange:", { hasEmailChange }, "hasProfileChange:", { hasProfileChange });
+
         if (!hasEmailChange && !hasProfileChange) {
             return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
         }
@@ -51,8 +53,8 @@ async function handlerCore(event, context, { auth }) {
             userId,
             oldEmail: email,
             newEmail,
-            firstName,
-            lastName,
+            newFirstName,
+            newLastName,
             hasEmailChange,
             hasProfileChange,
         });
@@ -68,12 +70,12 @@ async function updateUserTransactional(params) {
         userId,
         oldEmail,
         newEmail,
-        firstName,
-        lastName,
+        newFirstName,
+        newLastName,
         hasEmailChange,
         hasProfileChange,
     } = params;
-    console.log("updateUserTransactional called with:", { oldEmail, newEmail, firstName, lastName, hasEmailChange, hasProfileChange });
+    console.log("updateUserTransactional called with:", { oldEmail, newEmail, newFirstName, newLastName, hasEmailChange, hasProfileChange });
 
     const transactItems = [];
 
@@ -81,8 +83,8 @@ async function updateUserTransactional(params) {
         userId,
         oldEmail,
         newEmail,
-        firstName,
-        lastName,
+        newFirstName,
+        newLastName,
         hasEmailChange,
         hasProfileChange
     });
