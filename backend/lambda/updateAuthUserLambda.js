@@ -14,6 +14,8 @@ async function handlerCore(event, context, { auth }) {
     try {
         const { userId } = auth;
         let email;
+        let firstName;
+        let lastName;
 
         try {
             ({ email, firstName, lastName } = await getEmailByUserId(userId));
