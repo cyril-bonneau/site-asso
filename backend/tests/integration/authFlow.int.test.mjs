@@ -14,6 +14,8 @@ const TEST_NEW_EMAIL = `cyril.bonneausuccess${timestamp}success@outlook.com`;
 const TEST_PASSWORD = "Ax9!qL7#vZ3@pT2";
 const TEST_NEW_PASSWORD = "Hy4&nK8@wS6?dR1";
 const TEST_FIRSTNAME = "Jack";
+const TEST_NEW_FIRSTNAME = "Jackson";
+const TEST_NEW_LASTNAME = "Larnoque";
 const TEST_LASTNAME = "Larnaque";
 
 let userId;
@@ -103,8 +105,8 @@ describe("Parcours complet Auth (intégration)", () => {
 
         const body = {
             newEmail: TEST_NEW_EMAIL,
-            newFirstName: TEST_FIRSTNAME,
-            newLastName: TEST_LASTNAME,
+            newFirstName: TEST_NEW_FIRSTNAME,
+            newLastName: TEST_NEW_LASTNAME,
         }
 
         console.log('body.newEmail', body.newEmail);
