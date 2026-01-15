@@ -2,8 +2,8 @@ const AUTH_TABLE = process.env.AUTH_TABLE;
 const USER_TABLE = process.env.USER_TABLE;
 
 export function addUserProfileUpdateOperation({ userId,
-    firstName,
-    lastName,
+    newFirstName,
+    newLastName,
     newEmail,
     oldEmail,
     hasEmailChange,
@@ -87,15 +87,16 @@ export function addUserProfileUpdateOperation({ userId,
     }
 
     if (hasProfileChange || hasEmailChange) {
-        if (firstName !== undefined) {
+        console.log("hasProfileChange", { hasProfileChange }, "hasEmailChange:", { hasEmailChange });
+        if (newFirstName !== undefined) {
             exprNames["#firstName"] = "firstName";
-            exprValues[":firstName"] = firstName;
+            exprValues[":firstName"] = newFirstName;
             updateExpr += ", #firstName = :firstName";
         }
 
-        if (lastName !== undefined) {
+        if (newLastName !== undefined) {
             exprNames["#lastName"] = "lastName";
-            exprValues[":lastName"] = lastName;
+            exprValues[":lastName"] = newLastName;
             updateExpr += ", #lastName = :lastName";
         }
 
