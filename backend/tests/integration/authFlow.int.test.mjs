@@ -116,7 +116,16 @@ describe("Parcours complet Auth (intégration)", () => {
             Cookie: refreshToken,
         }
 
-        const payload = await updateCommand(userId, headers, body);
+        const payload = await client.send(
+            new InvokeCommand({
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
+                Payload: Buffer.from(JSON.stringify({
+                    queryStringParameters: { id: userId },
+                    headers: headers,
+                    body: JSON.stringify(body),
+                })),
+            })
+        );
 
         let response = decode(payload.Payload);
 
@@ -140,7 +149,16 @@ describe("Parcours complet Auth (intégration)", () => {
             Cookie: refreshToken,
         }
 
-        const payload2 = await updateCommand(userId, headers, body);
+        const payload2 = await client.send(
+            new InvokeCommand({
+                FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
+                Payload: Buffer.from(JSON.stringify({
+                    queryStringParameters: { id: userId },
+                    headers: headers,
+                    body: JSON.stringify(body),
+                })),
+            })
+        );
 
         console.log('body.newEmail after update', body.newEmail);
         response = decode(payload2.Payload);
@@ -267,16 +285,3 @@ describe("Parcours complet Auth (intégration)", () => {
     });
 
 });
-
-async function updateCommand(userId, headers, body) {
-    await client.send(
-        new InvokeCommand({
-            FunctionName: `site-asso-api-${process.env.STAGE}-updateAuthUser`,
-            Payload: Buffer.from(JSON.stringify({
-                queryStringParameters: { id: userId },
-                headers: headers,
-                body: JSON.stringify(body),
-            })),
-        })
-    );
-}
