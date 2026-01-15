@@ -168,7 +168,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
         console.log("response body message", response.body.message);
-        // expect(response.body.message).toBe("NOTHING_TO_UPDATE");
+        expect(response.body.message).toStrictEqual("NOTHING_TO_UPDATE");
 
     });
 
