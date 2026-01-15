@@ -45,6 +45,9 @@ async function handlerCore(event, context, { auth }) {
 
         console.log("hasEmailChange:", { hasEmailChange }, "hasProfileChange:", { hasProfileChange });
 
+        console.log("Current values:", { email, firstName, lastName });
+        console.log("New values:", { newEmail, newFirstName, newLastName });
+
         if (!hasEmailChange && !hasProfileChange) {
             return json(200, { ok: true, message: "NOTHING_TO_UPDATE" });
         }
