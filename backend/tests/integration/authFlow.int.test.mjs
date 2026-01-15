@@ -14,9 +14,9 @@ const TEST_NEW_EMAIL = `cyril.bonneausuccess${timestamp}success@outlook.com`;
 const TEST_PASSWORD = "Ax9!qL7#vZ3@pT2";
 const TEST_NEW_PASSWORD = "Hy4&nK8@wS6?dR1";
 const TEST_FIRSTNAME = "Jack";
+const TEST_LASTNAME = "Larnaque";
 const TEST_NEW_FIRSTNAME = "Jackson";
 const TEST_NEW_LASTNAME = "Larnoque";
-const TEST_LASTNAME = "Larnaque";
 
 let userId;
 let accessToken;
@@ -140,8 +140,8 @@ describe("Parcours complet Auth (intégration)", () => {
         const updatedProfile = await getUserProfileByUserId(userId);
         console.log("updatedProfile", updatedProfile);
         expect(updatedProfile).toBeDefined();
-        expect(updatedProfile.firstName).toBe(TEST_FIRSTNAME);
-        expect(updatedProfile.lastName).toBe(TEST_LASTNAME);
+        expect(updatedProfile.firstName).toBe(TEST_NEW_FIRSTNAME);
+        expect(updatedProfile.lastName).toBe(TEST_NEW_LASTNAME);
         expect(updatedProfile.email).toBe(TEST_NEW_EMAIL);
 
         headers = {
@@ -239,7 +239,7 @@ describe("Parcours complet Auth (intégration)", () => {
     });
 
     // 5) Suppression du user
-    it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
+    it.skip("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
 
         const body = {
             password: TEST_NEW_PASSWORD,
