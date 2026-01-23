@@ -345,12 +345,7 @@ functions:
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAssoTableArn}
           # - ${cf:site-asso-infra-${sls:stage}.DdbAssoMembershipTableArn}
-
-      - Effect: Allow
-        Action:
-          - s3:PutObject
-        Resource:
-          - arn:aws:s3:::${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}/*
+          
     events:
       - httpApi:
           method: POST

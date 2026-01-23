@@ -26,17 +26,22 @@ export const handler = withRateLimit(registerUserCore, {
 })
 
 async function registerUserCore(event) {
+    let input;
     try {
         console.log("registerUserCore event:", event);
-        const input = validateInput(event, registerInputSchema);
+        input = validateInput(event, registerInputSchema);
 
         if (!input.ok) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
+    } catch (err) {
+        console.error("registerUserCore error during input validation", err);
+        return json(500, { ok: false, message: "INTERNAL_ERROR" });
+    }
 
-        const { email, password, firstName, lastName } = input.body.data;
-        const privilege = ["USER"];
-
+    const { email, password, firstName, lastName } = input.body.data;
+    const privilege = ["USER"];
+    try {
         const check = await validatePasswordBackend(password, {
             email,
             // username: data.username,
@@ -44,10 +49,7 @@ async function registerUserCore(event) {
         });
 
         if (!check.ok) {
-            return {
-                statusCode: 422,
-                body: JSON.stringify({ ok: false, code: "WEAK_PASSWORD", reasons: check.reasons })
-            };
+            return json(422, { ok: false, code: "WEAK_PASSWORD", reasons: check.reasons });
         }
 
         const res = await createAuthEntry(email, password);
