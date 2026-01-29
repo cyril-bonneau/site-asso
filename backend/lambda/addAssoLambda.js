@@ -38,14 +38,10 @@ function createAssoTransactionRequest(data) {
             Put: {
                 TableName: process.env.ASSO_TABLE,
                 Item: {
-                    PK: `ASSO#${assoId}`,
-                    SK: "META",
+                    PK: `ASSO#${data.slug}`,
+                    SK: "UNIQUE",
                     assoId: assoId,
                     name: data.name,
-                    slug: data.slug,
-                    postalCode: data.postalCode,
-                    description: data.description,
-                    type: data.type,
                     createdAt: new Date().toISOString(),
                 },
                 ConditionExpression: "attribute_not_exists(PK)"
