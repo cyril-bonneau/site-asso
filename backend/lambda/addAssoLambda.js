@@ -15,7 +15,7 @@ export const handler = async (event) => {
         }
     } catch (error) {
         console.error("Error in addAssoLambda:", error);
-        return json(500, { ok: false, message: "INTERNAL_SERVER_ERROR" });
+        return json(500, { ok: false, message: "UNEXPECTED_ERROR_IN_VALIDATION" });
     }
 
     input.body.data.slug = createSlug(input.body.data.name, input.body.data.postalCode);
@@ -42,7 +42,6 @@ function createAssoTransactionRequest(data) {
                     PK: `ASSO#${data.slug}`,
                     SK: "UNIQUE",
                     assoId: assoId,
-                    name: data.name,
                     createdAt: new Date().toISOString(),
                 },
                 ConditionExpression: "attribute_not_exists(PK)"
