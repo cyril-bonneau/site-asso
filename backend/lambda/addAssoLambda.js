@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import { json } from "../helpers/toolbox.js";
 import { validateInput } from "../zod/validateInput.js";
 import { assoInputSchema } from "../zod/zodSchema/assoInputValidation.js";
-import { sendPutToDb } from "../dal/requestToDb.js";
+import { sendTransactToDb } from "../dal/requestToDb.js";
 
 export const handler = async (event) => {
     let input;
@@ -19,37 +19,76 @@ export const handler = async (event) => {
     }
 
     input.body.data.slug = createSlug(input.body.data.name, input.body.data.postalCode);
-    const newAsso = createAssoPutRequest(input.body.data);
+    const newAsso = createAssoTransactionRequest(input.body.data);
 
     try {
-        await sendPutToDb(newAsso);
-        return json(201, { ok: true, data: { assoId: newAsso.Item.assoId } });
+        await sendTransactToDb(newAsso);
+        return json(201, { ok: true, data: { assoId: newAsso[0].Put.Item.assoId } });
     } catch (error) {
         console.error("Error saving association:", error);
         return json(500, { ok: false, message: "INTERNAL_SERVER_ERROR" });
     }
 }
 
-function createAssoPutRequest(data) {
+function createAssoTransactionRequest(data) {
     const assoId = nanoid();
 
-    const request = {
-        TableName: process.env.ASSO_TABLE,
-        Item: {
-            PK: `ASSO#${assoId}`,
-            SK: "META",
-            assoId: assoId,
-            name: data.name,
-            slug: data.slug,
-            postalCode: data.postalCode,
-            description: data.description,
-            type: data.type,
-            createdAt: new Date().toISOString(),
+    const transaction = [
+        {
+            Put: {
+                TableName: process.env.ASSO_TABLE,
+                Item: {
+                    PK: `ASSO#${assoId}`,
+                    SK: "META",
+                    assoId: assoId,
+                    name: data.name,
+                    slug: data.slug,
+                    postalCode: data.postalCode,
+                    description: data.description,
+                    type: data.type,
+                    createdAt: new Date().toISOString(),
+                },
+                ConditionExpression: "attribute_not_exists(PK)"
+            }
         },
-        ConditionExpression: "attribute_not_exists(PK)"
-    };
+        {
+            Put: {
+                TableName: process.env.ASSO_TABLE,
+                Item: {
+                    PK: `ASSO#${assoId}`,
+                    SK: "META",
+                    assoId: assoId,
+                    name: data.name,
+                    slug: data.slug,
+                    postalCode: data.postalCode,
+                    description: data.description,
+                    type: data.type,
+                    createdAt: new Date().toISOString(),
+                },
+                ConditionExpression: "attribute_not_exists(PK)"
+            }
+        }
+    ];
 
-    return request;
+    // transaction.push({
+    //     Put: {
+    //         TableName: process.env.ASSO_TABLE,
+    //         Item: {
+    //             PK: `ASSO#${assoId}`,
+    //             SK: "META",
+    //             assoId: assoId,
+    //             name: data.name,
+    //             slug: data.slug,
+    //             postalCode: data.postalCode,
+    //             description: data.description,
+    //             type: data.type,
+    //             createdAt: new Date().toISOString(),
+    //         },
+    //         ConditionExpression: "attribute_not_exists(PK)"
+    //     }
+    // });
+
+    return transaction;
 }
 
 function createSlug(name, postalCode) {

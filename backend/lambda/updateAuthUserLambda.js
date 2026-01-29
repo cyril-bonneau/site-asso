@@ -17,14 +17,6 @@ async function handlerCore(event, context, { auth }) {
         let firstName;
         let lastName;
 
-        try {
-            ({ email, firstName, lastName } = await getEmailByUserId(userId));
-            console.log('email fetched by userId:', email);
-        } catch (err) {
-            console.error("Error fetching email by userId:", err);
-            return json(400, { ok: false, message: "USER_NOT_FOUND" });
-        }
-
         if (!userId) {
             return json(400, { ok: false, message: "MISSING_USER_ID" });
         }
@@ -34,6 +26,14 @@ async function handlerCore(event, context, { auth }) {
         if (!input.ok) {
             console.log("Input validation failed:", input.body.message);
             return json(input.statusCode, { ok: false, message: input.body.message });
+        }
+
+        try {
+            ({ email, firstName, lastName } = await getEmailByUserId(userId));
+            console.log('email fetched by userId:', email);
+        } catch (err) {
+            console.error("Error fetching email by userId:", err);
+            return json(400, { ok: false, message: "USER_NOT_FOUND" });
         }
 
         const { newEmail, newFirstName, newLastName } = input.body.data;
@@ -120,8 +120,8 @@ async function updateUserTransactional(params) {
             }
         });
     } catch (err) {
-        const errorName = err?.name || "";
-        const msg = err?.message || "";
+        const errorName = err?.name ?? "";
+        const msg = err?.message ?? "";
 
         if (
             errorName === "TransactionCanceledException" ||
