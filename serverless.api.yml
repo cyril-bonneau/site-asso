@@ -348,7 +348,7 @@ functions:
           
     events:
       - httpApi:
-          method: POST
+          method: PUT
           path: /addasso
 
 resources:
