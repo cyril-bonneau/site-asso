@@ -23,6 +23,7 @@ export const handler = async (event) => {
 
     try {
         await sendTransactToDb(newAsso);
+        console.log("Association saved successfully:", newAsso);
         return json(201, { ok: true, data: { assoId: newAsso[0].Put.Item.assoId } });
     } catch (error) {
         console.error("Error saving association:", error);
@@ -65,24 +66,6 @@ function createAssoTransactionRequest(data) {
             }
         }
     ];
-
-    // transaction.push({
-    //     Put: {
-    //         TableName: process.env.ASSO_TABLE,
-    //         Item: {
-    //             PK: `ASSO#${assoId}`,
-    //             SK: "META",
-    //             assoId: assoId,
-    //             name: data.name,
-    //             slug: data.slug,
-    //             postalCode: data.postalCode,
-    //             description: data.description,
-    //             type: data.type,
-    //             createdAt: new Date().toISOString(),
-    //         },
-    //         ConditionExpression: "attribute_not_exists(PK)"
-    //     }
-    // });
 
     return transaction;
 }
