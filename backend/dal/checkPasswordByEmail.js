@@ -11,7 +11,7 @@ export async function checkPasswordByEmail({ password, email }) {
     console.log("Auth retrieved for email check:", auth);
 
     if (!auth || !auth.passwordHash) {
-        throw new Error("ERROR");
+        throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
     }
 
     if (await verifyPassword(auth.passwordHash, password)) {
@@ -21,9 +21,13 @@ export async function checkPasswordByEmail({ password, email }) {
             privilege: auth.privilege
         }
     } else {
-        await verifyPassword("$invalidHash", password); // pour résister aux attaques timing
-        return {
-            check: false
+        try {
+            await verifyPassword("$invalidHash", password); // pour résister aux attaques timing
+        } catch (err) {
+            console.log("err", err);
+            return {
+                check: false
+            }
         }
     }
 }
