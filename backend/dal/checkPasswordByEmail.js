@@ -8,8 +8,10 @@ const USER_TABLE = process.env.USER_TABLE;
 export async function checkPasswordByEmail({ password, email }) {
     const auth = await getAuthByEmail(email);
 
+    console.log("Auth retrieved for email check:", auth);
+
     if (!auth || !auth.passwordHash) {
-        throw new Error("AUTH_NOT_FOUND_OR_MISSING_PASSWORD_HASH");
+        throw new Error("ERROR");
     }
 
     if (await verifyPassword(auth.passwordHash, password)) {
@@ -40,6 +42,7 @@ async function getAuthByEmail(email) {
         res[0].privilege = await getPrivilegeByUserId(res[0].userId)
         return res[0]
     } catch (err) {
+        console.log("getAuthByEmail error:", err);
         return err
     }
 }
