@@ -18,7 +18,7 @@ async function handlerCore(event) {
         input = validateInput(event, preSignedUrlSchema);
         console.log("Validated input:", input);
 
-        const assoId = event.queryStringParameters?.assoId;
+        var assoId = event.queryStringParameters?.assoId;
         console.log("assoId from query parameters:", assoId);
 
         if (!input.ok) {
