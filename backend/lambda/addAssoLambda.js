@@ -10,8 +10,8 @@ export const handler = withAuth(handlerCore, {
 })
 
 async function handlerCore(event) {
-    let input;
     try {
+        var input;
         console.log("addAssoLambda event:", event);
         input = validateInput(event, assoInputSchema);
 
@@ -29,6 +29,7 @@ async function handlerCore(event) {
     try {
         await sendTransactToDb(newAsso);
         console.log("Association saved successfully:", newAsso);
+        console.log("Returning response with assoId:", newAsso[0].Put.Item.assoId);
         return json(201, { ok: true, data: { assoId: newAsso[0].Put.Item.assoId } });
     } catch (error) {
         console.error("Error saving association:", error);
