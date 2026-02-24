@@ -21,10 +21,14 @@ export async function checkPasswordByEmail({ password, email }) {
             privilege: auth.privilege
         }
     } else {
-        const result = await verifyPassword("$invalidHash", password); // pour résister aux attaques timing
-        console.log("Password verification result for invalid hash (should be false):", result);
-        return {
-            check: false
+        const dummyHash = "$argon2id$v=19$m=65536,t=3,p=4$invalidsalt$invalidhash";
+        try {
+            await verifyPassword(dummyHash, password); // pour résister aux attaques timing
+        } catch (err) {
+            console.error("Error during dummy password verification:", err);
+            return {
+                check: false
+            }
         }
     }
 }
@@ -43,7 +47,7 @@ async function getAuthByEmail(email) {
         res[0].privilege = await getPrivilegeByUserId(res[0].userId)
         return res[0]
     } catch (err) {
-        console.log("getAuthByEmail error:", err);
+        console.error("getAuthByEmail error:", err);
         return err
     }
 }

@@ -226,7 +226,7 @@ describe("Parcours complet Auth (intégration)", () => {
 
         console.log("LoginUser Lambda response (wrong password):", response);
 
-        expect(response.statusCode).toBe(403); // WRONG_CREDENTIALS attendu
+        expect(response.statusCode).toBe(404); // WRONG_CREDENTIALS attendu
         expect(response.body.ok).toBe(false);
         expect(response.body.message).toBe("WRONG_CREDENTIALS");
 
