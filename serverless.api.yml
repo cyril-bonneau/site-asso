@@ -364,6 +364,7 @@ functions:
     events:
       - httpApi:
           method: PUT
+          path: /generateuploadurl
 
 resources:
   Resources:
