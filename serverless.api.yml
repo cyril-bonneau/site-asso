@@ -367,6 +367,13 @@ functions:
           - s3:PutObject
         Resource:
           - arn:aws:s3:::${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}/*
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
+          
     events:
       - httpApi:
           method: PUT
