@@ -18,6 +18,9 @@ async function handlerCore(event) {
         input = validateInput(event, preSignedUrlSchema);
         console.log("Validated input:", input);
 
+        const assoId = event.pathParameters?.assoId;
+        console.log("assoId from path parameters:", assoId);
+
         if (!input.ok) {
             return json(input.statusCode, { ok: false, message: input.body.message });
         }
@@ -25,7 +28,7 @@ async function handlerCore(event) {
         console.error("Error in generateAssoUploadUrlLambda:", error);
         return json(500, { ok: false, message: "UNEXPECTED_ERROR_IN_VALIDATION" });
     }
-    const { assoId, contentType, size, checksum } = input.body.data;
+    const { contentType, size, checksum, fileName } = input.body.data;
 
     const key = `ASSO#${assoId}/META/LOGO`;
 
@@ -36,7 +39,8 @@ async function handlerCore(event) {
         ContentLength: size,
         Metadata: {
             checksum: checksum,
-            "original-filename": `${assoId}_logo`
+            "original-filename": fileName,
+            assoId: assoId,
         }
     };
 

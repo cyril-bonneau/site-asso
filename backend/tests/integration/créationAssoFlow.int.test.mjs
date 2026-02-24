@@ -99,10 +99,10 @@ describe("Parcours complet création d'association (intégration)", () => {
 
     it("devrait permettre de générer une URL de pré-signed upload pour le logo de l'association", async () => {
         const body = {
-            assoId: assoId,
             contentType: "image/png",
             size: 1 * 1024 * 1024,
-            checksum: "fd494bd1744d057d76fe4ec6ff754f50c0151f08f33dc1784381bf95ef22c8cf"
+            checksum: "fd494bd1744d057d76fe4ec6ff754f50c0151f08f33dc1784381bf95ef22c8cf",
+            fileName: "assoLogo"
         }
 
         let headers = {
@@ -114,6 +114,7 @@ describe("Parcours complet création d'association (intégration)", () => {
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-generateUploadUrl`,
                 Payload: Buffer.from(JSON.stringify({
+                    queryStringParameters: { assoId: assoId },
                     headers: headers,
                     body: JSON.stringify(body),
                 })),
