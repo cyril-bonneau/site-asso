@@ -21,13 +21,10 @@ export async function checkPasswordByEmail({ password, email }) {
             privilege: auth.privilege
         }
     } else {
-        try {
-            await verifyPassword("$invalidHash", password); // pour résister aux attaques timing
-        } catch (err) {
-            console.log("err", err);
-            return {
-                check: false
-            }
+        const result = await verifyPassword("$invalidHash", password); // pour résister aux attaques timing
+        console.log("Password verification result for invalid hash (should be false):", result);
+        return {
+            check: false
         }
     }
 }
