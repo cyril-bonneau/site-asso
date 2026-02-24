@@ -202,6 +202,9 @@ describe("Parcours complet Auth (intégration)", () => {
         console.log("access token", accessToken);
         console.log("refresh token", refreshToken);
 
+        console.log("response statusCode", response.statusCode);
+        console.log("response body", response.body);
+
         expect(response.statusCode).toBe(200);
         expect(response.body.ok).toBe(true);
 
@@ -218,6 +221,8 @@ describe("Parcours complet Auth (intégration)", () => {
         );
 
         response = decode(payload.Payload);
+
+        console.log("response", response);
 
         console.log("LoginUser Lambda response (wrong password):", response);
 
