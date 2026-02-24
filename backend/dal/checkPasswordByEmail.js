@@ -26,9 +26,10 @@ export async function checkPasswordByEmail({ password, email }) {
             await verifyPassword(dummyHash, password); // pour résister aux attaques timing
         } catch (err) {
             console.error("Error during dummy password verification:", err);
-            return {
-                check: false
-            }
+            return { check: false }; // En cas d'erreur inattendue, on retourne null pour éviter de révéler des informations
+        }
+        return {
+            check: false
         }
     }
 }
