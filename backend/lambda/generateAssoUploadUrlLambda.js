@@ -36,7 +36,7 @@ async function handlerCore(event) {
         ContentLength: size,
         Metadata: {
             checksum: checksum,
-            "x-amz-meta-original-filename": `${assoId}_logo`
+            "original-filename": `${assoId}_logo`
         }
     };
 

@@ -13,9 +13,10 @@ const TEST_PASSWORD = "Ax9!qL7#vZ3@pT2";
 const TEST_FIRSTNAME = "Jack";
 const TEST_LASTNAME = "Larnaque";
 
-let userId;
-let accessToken;
-let refreshToken;
+var userId;
+var accessToken;
+var refreshToken;
+var assoId;
 
 describe("Parcours complet création d'association (intégration)", () => {
     beforeAll(async () => {
@@ -88,11 +89,81 @@ describe("Parcours complet création d'association (intégration)", () => {
 
         console.log("addAsso Lambda response:", response);
         console.log("Logged in accessToken:", response.body.accessToken);
+        assoId = response.body.data.assoId;
 
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(201);
         expect(response.body.ok).toBe(true);
-        expect(response.body.data.assoId).toBeDefined();
+        expect(assoId).toBeDefined();
+    });
 
+    it("devrait permettre de générer une URL de pré-signed upload pour le logo de l'association", async () => {
+        const body = {
+            assoId: assoId,
+            contentType: "image/png",
+            size: 1 * 1024 * 1024,
+            checksum: "fd494bd1744d057d76fe4ec6ff754f50c0151f08f33dc1784381bf95ef22c8cf"
+        }
+
+        let headers = {
+            Authorization: `Bearer ${accessToken}`,
+            Cookie: refreshToken,
+        }
+
+        const payload = await client.send(
+            new InvokeCommand({
+                FunctionName: `site-asso-api-${process.env.STAGE}-generateUploadUrl`,
+                Payload: Buffer.from(JSON.stringify({
+                    headers: headers,
+                    body: JSON.stringify(body),
+                })),
+            })
+        );
+
+        const response = decode(payload.Payload);
+
+        console.log("generateUploadUrl Lambda response:", response);
+        console.log("Logged in accessToken:", response.body.accessToken);
+        const uploadUrl = response.body.data.uploadUrl;
+
+        expect(response).toBeDefined();
+        expect(response.statusCode).toBe(200);
+        expect(response.body.ok).toBe(true);
+        expect(uploadUrl).toBeDefined();
+    });
+
+    it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
+
+        const body = {
+            password: TEST_PASSWORD,
+        }
+
+        const headers = {
+            Authorization: `Bearer ${accessToken}`,
+            Cookie: refreshToken,
+        }
+
+        const payload = await client.send(
+            new InvokeCommand({
+                FunctionName: `site-asso-api-${process.env.STAGE}-removeAuthUser`,
+                Payload: Buffer.from(JSON.stringify({
+                    headers: headers,
+                    body: JSON.stringify(body),
+                })),
+            })
+        );
+
+        const response = decode(payload.Payload);
+
+        console.log("RemoveAuthUser Lambda response:", response);
+
+        expect(response.statusCode).toBe(200);
+        expect(response.body.ok).toBe(true);
+        expect(response.body.message).toBe("User removed");
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const profileAfterDelete = await getUserProfileByUserId(userId);
+        console.log("profileAfterDelete", profileAfterDelete);
+        expect(profileAfterDelete).toBeUndefined();
     });
 })
