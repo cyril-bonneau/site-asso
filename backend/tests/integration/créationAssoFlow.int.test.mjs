@@ -62,21 +62,29 @@ describe("Parcours complet création d'association (intégration)", () => {
 
     it("devrait permettre de créer la base d'une association", async () => {
 
-        const payload = {
+        const body = {
             name: "my asso toto blabla",
             description: "Cette association est un test pour la lambda de création de fiche d'associaction.",
             type: "association",
             postalCode: "94450"
         }
 
-        const request = await client.send(
+        let headers = {
+            Authorization: `Bearer ${accessToken}`,
+            Cookie: refreshToken,
+        }
+
+        const payload = await client.send(
             new InvokeCommand({
                 FunctionName: `site-asso-api-${process.env.STAGE}-addAsso`,
-                Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(payload) })),
+                Payload: Buffer.from(JSON.stringify({
+                    headers: headers,
+                    body: JSON.stringify(body),
+                })),
             })
         );
 
-        const response = decode(request.Payload);
+        const response = decode(payload.Payload);
 
         console.log("addAsso Lambda response:", response);
         console.log("Logged in accessToken:", response.body.accessToken);
@@ -84,7 +92,7 @@ describe("Parcours complet création d'association (intégration)", () => {
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(201);
         expect(response.body.ok).toBe(true);
-        expect(response.data.assoId).toBeDefined();
+        expect(response.body.data.assoId).toBeDefined();
 
     });
 })
