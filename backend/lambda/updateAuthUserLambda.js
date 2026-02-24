@@ -71,26 +71,15 @@ async function handlerCore(event, context, { auth }) {
 async function updateUserTransactional(params) {
     const {
         userId,
-        oldEmail,
         newEmail,
-        newFirstName,
-        newLastName,
         hasEmailChange,
         hasProfileChange,
     } = params;
-    console.log("updateUserTransactional called with:", { oldEmail, newEmail, newFirstName, newLastName, hasEmailChange, hasProfileChange });
+    console.log("updateUserTransactional called with:", params);
 
     const transactItems = [];
 
-    const addUserProfileUpdateOperationResult = addUserProfileUpdateOperation({
-        userId,
-        oldEmail,
-        newEmail,
-        newFirstName,
-        newLastName,
-        hasEmailChange,
-        hasProfileChange
-    });
+    const addUserProfileUpdateOperationResult = addUserProfileUpdateOperation(params);
     console.log("type addUserProfileUpdateOperationResult", typeof addUserProfileUpdateOperationResult, Array.isArray(addUserProfileUpdateOperationResult));
     transactItems.push(...addUserProfileUpdateOperationResult)
     console.log("transactItems hasEmailChange", transactItems)

@@ -17,14 +17,14 @@ export const handler = async (event) => {
         try {
             if (rec.eventName !== "REMOVE") continue
 
-            console.log("rec.dynamodb?.NewImage", rec.dynamodb?.OldImage)
             const oldImgRaw = rec.dynamodb?.OldImage;
+            console.log("rec.dynamodb?.OldImage", oldImgRaw)
 
             if (!oldImgRaw) continue;
 
             const oldImg = unmarshall(oldImgRaw);
-            const email = oldImg.email
-            const userId = oldImg.userId
+            const email = oldImg.email;
+            const userId = oldImg.userId;
 
             if (!email || !userId) {
                 console.warn("onAuthStream: record incomplet (skip)", { hasEmail: !!email });

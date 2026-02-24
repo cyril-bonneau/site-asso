@@ -332,12 +332,10 @@ functions:
 
   addAsso:
     handler: backend/lambda/addAssoLambda.handler
-    memorySize: 1024
+    memorySize: 512
     architecture: arm64
     environment:
       ASSO_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAssoTable}
-      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}
-      # ASSO_MEMBERSHIP_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAssoMembershipTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -350,6 +348,22 @@ functions:
       - httpApi:
           method: PUT
           path: /addasso
+
+  generateUploadUrl:
+    handler: backend/lambda/generateAssoUploadUrlLambda.handler
+    memorySize: 512
+    architecture: arm64
+    environment:
+      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          - arn:aws:s3:::${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}/*
+    events:
+      - httpApi:
+          method: PUT
 
 resources:
   Resources:

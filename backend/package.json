@@ -19,6 +19,7 @@
     "@aws-sdk/client-s3": "^3.966.0",
     "@aws-sdk/client-ssm": "^3.943.0",
     "@aws-sdk/lib-dynamodb": "^3.902.0",
+    "@aws-sdk/s3-request-presigner": "^3.978.0",
     "argon2": "^0.44.0",
     "cookie": "^1.1.1",
     "jose": "^6.1.0",
@@ -29,9 +30,9 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.8",
-    "nodemon": "^3.1.10",
-    "serverless": "^4.20.2",
-    "serverless-esbuild": "^1.56.1",
+    "nodemon": "^3.1.11",
+    "serverless": "^4.32.0",
+    "serverless-esbuild": "^1.57.0",
     "vitest": "^4.0.8"
   },
   "overrides": {

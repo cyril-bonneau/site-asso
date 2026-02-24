@@ -76,3 +76,26 @@ export function currentDateFr() {
         day: '2-digit',
     }).format(new Date());
 }
+
+export function sanitizeText(input, opts = {}) {
+    const {
+        maxLength = 200,
+        allowNewLines = false,
+        fallback = "",
+    } = opts;
+
+    if (typeof input !== "string") return fallback;
+
+    let value = input
+        .normalize("NFKC") // Normalisation Unicode
+        .replace(/[\u0000-\u001F\u007F]/g, "")
+        .replace(/</g, "")
+        .replace(/>/g, "")
+        .replace(/["'`]/g, "");
+
+    if (!allowNewLines) {
+        value = value.replace(/\r?\n|\r/g, " ");
+    }
+
+    return value.trim().slice(0, maxLength);
+}

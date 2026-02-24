@@ -1,13 +1,15 @@
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const USER_TABLE = process.env.USER_TABLE;
 
-export function addUserProfileUpdateOperation({ userId,
-    newFirstName,
-    newLastName,
-    newEmail,
-    oldEmail,
-    hasEmailChange,
-    hasProfileChange }) {
+export function addUserProfileUpdateOperation(params) {
+
+    const { userId,
+        newFirstName,
+        newLastName,
+        newEmail,
+        oldEmail,
+        hasEmailChange,
+        hasProfileChange } = params;
 
     const exprNames = {
         "#updatedAt": "updatedAt",

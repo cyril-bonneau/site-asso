@@ -28,7 +28,7 @@ export const handler = withRateLimit(registerUserCore, {
 async function registerUserCore(event) {
     let input;
     try {
-        console.log("registerUserCore event:", event);
+        console.info("registerUserCore event:", event);
         input = validateInput(event, registerInputSchema);
 
         if (!input.ok) {
@@ -69,7 +69,7 @@ async function registerUserCore(event) {
         console.log("accessToken", accessToken)
 
         // il est attendu au minimum userId, email, firstName, lastName
-        const detail = buildUserRegisterDetail({ email, firstName, lastName, userId, privilege });
+        const detail = { email, firstName, lastName, userId, privilege }; // pas besoin d'une fonction juste les accolades et ça va fonctionner
         const eventEntry = buildUserRegisterEvent(detail);
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
@@ -128,18 +128,20 @@ async function createAuthEntry(email, password) {
     const maxIdRetries = 3;
     for (let attempt = 0; attempt < maxIdRetries; attempt++) {
         const id = nanoid();
-        const now = new Date().toISOString()
+        const now = new Date().toISOString();
+        const userEmail = `EMAIL#${email}`;
+        const userId = `USER#${id}`;
 
         const transaction = [
             {
                 Put: {
                     TableName: AUTH_TABLE,
                     Item: {
-                        PK: `USER#${id}`,
+                        PK: userId,
                         SK: "AUTH",
                         userId: id,
-                        GSI1PK: `EMAIL#${email}`,
-                        GSI1SK: `USER#${id}`,
+                        GSI1PK: userEmail,
+                        GSI1SK: userId,
                         email: email,
                         passwordHash: hashedPwd,
                         createdAt: now,
@@ -152,9 +154,9 @@ async function createAuthEntry(email, password) {
                 Put: {
                     TableName: AUTH_TABLE,
                     Item: {
-                        PK: `EMAIL#${email}`,
+                        PK: userEmail,
                         SK: "UNIQUE",
-                        userId: `USER#${id}`,
+                        userId: userId,
                         createdAt: now,
                     },
                     ConditionExpression: "attribute_not_exists(PK)",
@@ -167,7 +169,7 @@ async function createAuthEntry(email, password) {
 
             await sendTransactToDb(transaction, true);
 
-            console.log("createAuthEntry success", { email: email, userId: id })
+            console.info("createAuthEntry success", { email: email, userId: id })
 
             return {
                 statusCode: 201,
@@ -184,17 +186,17 @@ async function createAuthEntry(email, password) {
                     code: r.Code,
                     message: r.Message,
                 }));
-                console.log("createAuthEntry cancellation reasons", reasons)
+                console.info("createAuthEntry cancellation reasons", reasons)
 
                 const emailCheck = reasons.find(r => r.index === 0);
-                console.log("emailCheck", emailCheck)
+                console.info("emailCheck", emailCheck)
 
                 if (emailCheck && emailCheck.code === "ConditionalCheckFailed") {
                     return { statusCode: 409, error: "EMAIL_ALREADY_EXISTS" }
                 }
 
                 const checkId = reasons.find(r => r.index === 1);
-                console.log("checkId", checkId)
+                console.info("checkId", checkId)
 
                 if (checkId && checkId.code === "ConditionalCheckFailed") {
                     console.error("ID_COLLISION RETRYING...");
@@ -202,7 +204,7 @@ async function createAuthEntry(email, password) {
                         await new Promise(r => setTimeout(r, 25 * (attempt + 1)));
                         continue;
                     }
-                    console.log({ error: "ID_COLLISION" })
+                    console.error({ error: "ID_COLLISION" })
                     throw { statusCode: 409, error: "ID_COLLISION" }
                 };
             }
@@ -212,15 +214,15 @@ async function createAuthEntry(email, password) {
     }
 }
 
-function buildUserRegisterDetail({ userId, email, firstName, lastName, privilege }) {
-    return {
-        userId: userId,
-        email: email,
-        firstName: firstName,
-        lastName: lastName,
-        privilege: privilege
-    }
-}
+// function buildUserRegisterDetail({ userId, email, firstName, lastName, privilege }) {
+//     return {
+//         userId: userId,
+//         email: email,
+//         firstName: firstName,
+//         lastName: lastName,
+//         privilege: privilege
+//     }
+// }
 
 function buildUserRegisterEvent(detail) {
     return {

@@ -3,8 +3,13 @@ import { json } from "../helpers/toolbox.js";
 import { validateInput } from "../zod/validateInput.js";
 import { assoInputSchema } from "../zod/zodSchema/assoInputValidation.js";
 import { sendTransactToDb } from "../dal/requestToDb.js";
+import { withAuth } from "../middlewares/withAuthMiddlewares.js";
 
-export const handler = async (event) => {
+export const handler = withAuth(handlerCore, {
+    requiredRoles: ["USER"],
+})
+
+async function handlerCore(event) {
     let input;
     try {
         console.log("addAssoLambda event:", event);

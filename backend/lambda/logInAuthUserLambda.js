@@ -1,5 +1,5 @@
 import { checkPasswordByEmail } from "../dal/checkPasswordByEmail.js";
-import { normalizeEmail, json } from "../helpers/toolbox.js";
+import { json } from "../helpers/toolbox.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
 import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
@@ -39,17 +39,14 @@ async function loginCore({ email, password }) {
 
     try {
 
-        const { check, userId, privilege } = await checkPasswordByEmail({ password, email: normalizeEmail(email) })
+        const { check, userId, privilege } = await checkPasswordByEmail({ password, email })
 
         console.log("privilege", privilege)
         if (!check) {
-            return json(403, { ok: false, message: "WRONG_CREDENTIALS" });
+            return json(404, { ok: false, message: "WRONG_CREDENTIALS" });
         }
 
-        const iss = process.env.ISSUER
-        const iat = Math.floor(Date.now() / 1000);
-        const exp = iat + 15 * 60; // 15 minutes
-        const payload = { iss, iat, exp, userId, privilege };
+        const payload = { userId, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
 
         // console.log("accessToken", accessToken)
