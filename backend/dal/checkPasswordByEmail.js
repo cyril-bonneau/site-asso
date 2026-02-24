@@ -19,7 +19,7 @@ export async function checkPasswordByEmail({ password, email }) {
             privilege: auth.privilege
         }
     } else {
-        await verifyPassword("invalidHash", password); // pour résister aux attaques timing
+        await verifyPassword("$invalidHash", password); // pour résister aux attaques timing
         return {
             check: false
         }
