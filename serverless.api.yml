@@ -343,6 +343,12 @@ functions:
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbAssoTableArn}
           # - ${cf:site-asso-infra-${sls:stage}.DdbAssoMembershipTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
           
     events:
       - httpApi:
