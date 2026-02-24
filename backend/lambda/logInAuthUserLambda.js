@@ -40,6 +40,7 @@ async function loginCore({ email, password }) {
     try {
 
         const { check, userId, privilege } = await checkPasswordByEmail({ password, email })
+        console.log("checkPasswordByEmail result:", { check, userId, privilege });
 
         console.log("privilege", privilege)
         if (!check) {

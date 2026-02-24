@@ -46,92 +46,92 @@ jobs:
   #       working-directory: ./backend
   #       run: npm run test:unit
 
-  deploy-infra:
-    name: Deploy Infra
-    # needs: setup-aws
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+  # deploy-infra:
+  #   name: Deploy Infra
+  #   # needs: setup-aws
+  #   if: github.event_name == 'push'
+  #   runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write      # pour l'OIDC vers AWS
-      contents: read
+  #   permissions:
+  #     id-token: write      # pour l'OIDC vers AWS
+  #     contents: read
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Set STAGE from branch
-        run: |
-          BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "Current branch: $BRANCH"
+  #     - name: Set STAGE from branch
+  #       run: |
+  #         BRANCH="${GITHUB_REF#refs/heads/}"
+  #         echo "Current branch: $BRANCH"
 
-          if [ "$BRANCH" = "master" ]; then
-            echo "STAGE=prod" >> $GITHUB_ENV
-          elif [ "$BRANCH" = "dev" ]; then
-            echo "STAGE=dev" >> $GITHUB_ENV
-          else
-            # feature/*
-            echo "STAGE=sandbox" >> $GITHUB_ENV
-          fi
+  #         if [ "$BRANCH" = "master" ]; then
+  #           echo "STAGE=prod" >> $GITHUB_ENV
+  #         elif [ "$BRANCH" = "dev" ]; then
+  #           echo "STAGE=dev" >> $GITHUB_ENV
+  #         else
+  #           # feature/*
+  #           echo "STAGE=sandbox" >> $GITHUB_ENV
+  #         fi
 
-      - name: Cache Serverless build
-        uses: actions/cache@v4
-        with:
-          path: .serverless
-          key: ${{ runner.os }}-serverless-${{ hashFiles('serverless.infra.yml', 'serverless.api.yml') }}
+  #     - name: Cache Serverless build
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: .serverless
+  #         key: ${{ runner.os }}-serverless-${{ hashFiles('serverless.infra.yml', 'serverless.api.yml') }}
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: |
-            backend/package-lock.json
+  #     - name: Use Node.js 22
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #         cache: 'npm'
+  #         cache-dependency-path: |
+  #           backend/package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm ci
+  #     - name: Install backend dependencies
+  #       working-directory: ./backend
+  #       run: npm ci
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: eu-west-3
-          role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
-          role-session-name: site-asso-ci
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-region: eu-west-3
+  #         role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
+  #         role-session-name: site-asso-ci
 
-      - name: setup refresh secret key
-        run: |
-          aws ssm put-parameter \
-            --name "/site-asso/${STAGE}/secret/refreshTokenHmac" \
-            --value "${{ secrets.REFRESH_JWT_SECRET }}" \
-            --type SecureString \
-            --overwrite
+  #     - name: setup refresh secret key
+  #       run: |
+  #         aws ssm put-parameter \
+  #           --name "/site-asso/${STAGE}/secret/refreshTokenHmac" \
+  #           --value "${{ secrets.REFRESH_JWT_SECRET }}" \
+  #           --type SecureString \
+  #           --overwrite
 
-      - name: Debug - config Serverless compilée
-        working-directory: .
-        env:
-          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-        run: |
-          npx serverless print --config serverless.infra.yml --stage $STAGE | sed -n '1,200p'
+  #     - name: Debug - config Serverless compilée
+  #       working-directory: .
+  #       env:
+  #         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+  #       run: |
+  #         npx serverless print --config serverless.infra.yml --stage $STAGE | sed -n '1,200p'
 
-      - name: Deploy Infra
-        working-directory: .
-        env:
-          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-        run: |
-          npx serverless deploy --config serverless.infra.yml --stage $STAGE
+  #     - name: Deploy Infra
+  #       working-directory: .
+  #       env:
+  #         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+  #       run: |
+  #         npx serverless deploy --config serverless.infra.yml --stage $STAGE
       
-      - name: Sync KMS public key to SSM
-        working-directory: ./backend
-        env:
-          STAGE: ${{ env.STAGE }}
-          AWS_REGION: eu-west-3
-        run: |
-          node scripts/syncKmsPublicKeyToSsm.js
+  #     - name: Sync KMS public key to SSM
+  #       working-directory: ./backend
+  #       env:
+  #         STAGE: ${{ env.STAGE }}
+  #         AWS_REGION: eu-west-3
+  #       run: |
+  #         node scripts/syncKmsPublicKeyToSsm.js
 
   deploy-api:
     name: Deploy API
-    needs: deploy-infra
+    # needs: deploy-infra
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
