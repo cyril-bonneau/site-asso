@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sanitizeText } from "../../helpers/toolbox";
+import { sanitizeText } from "../../helpers/toolbox.js";
 
 export const preSignedUrlSchema = z.object({
     contentType: z.literal("image/png"),
