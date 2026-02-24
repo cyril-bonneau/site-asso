@@ -63,7 +63,7 @@ describe("Parcours complet création d'association (intégration)", () => {
     it("devrait permettre de créer la base d'une association", async () => {
 
         const body = {
-            name: "my asso toto blabla",
+            name: `Association de test ${timestamp}`,
             description: "Cette association est un test pour la lambda de création de fiche d'associaction.",
             type: "association",
             postalCode: "94450"
