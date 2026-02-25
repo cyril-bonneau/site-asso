@@ -360,13 +360,13 @@ functions:
     memorySize: 512
     architecture: arm64
     environment:
-      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}
+      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucketArn}
     iamRoleStatements:
       - Effect: Allow
         Action:
           - s3:PutObject
         Resource:
-          - ${cf:site-asso-infra-${sls:stage}.AssoLogoBucket}/*
+          - ${cf:site-asso-infra-${sls:stage}.AssoLogoBucketArn}/*
 
       - Effect: Allow
         Action:
