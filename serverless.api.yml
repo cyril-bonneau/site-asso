@@ -360,7 +360,7 @@ functions:
     memorySize: 512
     architecture: arm64
     environment:
-      ASSO_LOGO_BUCKET: ${cf:site-asso-infra-${sls:stage}.AssoLogoBucketArn}
+      ASSO_LOGO_BUCKET: ${cf:site-asso-${sls:stage}-asso-logo}
     iamRoleStatements:
       - Effect: Allow
         Action:
