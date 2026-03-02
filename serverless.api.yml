@@ -329,7 +329,7 @@ functions:
         Action:
           - dynamodb:Query
         Resource: 
-          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
+          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}/index/*
 
       - Effect: Allow
         Action:
