@@ -31,13 +31,17 @@ export const handler = async (event) => {
                 console.warn("onAuthStream: record incomplet (skip)", { hasEmail: !!email });
                 continue;
             }
+            const result = await queryItems(userId)
+            console.log("on remove result", result)
+            console.log("quel taille tu fais ?", result.length)
+
+            const itterationResult = itterateInsideArray(result, userId)
+
+            console.log("itterateResult", itterationResult);
 
             await removeUserWithUniqueEmail({ userId, email })
 
-            const result = await queryItems(userId)
 
-            console.log("on remove result", result)
-            console.log("quel taille tu fais ?", result.length)
 
         } catch (err) {
             if (err?.name === "ConditionalCheckFailedException") {
@@ -71,6 +75,21 @@ async function queryItems(userId){
         console.log("query error", err)
         return err
     }
+}
+
+function itterateInsideArray(result, userId){
+    let arrayItterationResult = [];
+    for(let i = 0; i < result.length; i ++){
+        arrayItterationResult.push({
+            Delete: {
+                TableName: TOKEN_TABLE,
+                Key: { PK: result[i].PK, SK: result[i].SK },
+                ConditionExpression: "userId = :uid",
+                ExpressionAttributeValues: { ":uid":userId }
+            }
+        })
+    }
+    return arrayItterationResult;
 }
 
 async function removeUserWithUniqueEmail({ userId, email }) {
