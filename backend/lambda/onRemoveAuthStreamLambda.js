@@ -64,6 +64,8 @@ async function queryItems(userId){
             ExpressionAttributeValues: { ":uid": userId },
             ProjectionExpression: "PK, SK"
         })
+
+        return res
     } catch(err) {
         console.log("query error", err)
         return err
