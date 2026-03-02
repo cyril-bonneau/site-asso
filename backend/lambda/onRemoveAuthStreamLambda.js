@@ -1,7 +1,8 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
-import { sendTransactToDb } from "../dal/requestToDb.js";
+import { sendTransactToDb, queryDb } from "../dal/requestToDb.js";
 
 const USER_TABLE = process.env.USER_TABLE;
+const TOKEN_TABLE = process.env.REFRESH_TOKEN_TABLE
 
 const RETRYABLE = new Set([
     "ProvisionedThroughputExceededException",
@@ -33,6 +34,10 @@ export const handler = async (event) => {
 
             await removeUserWithUniqueEmail({ userId, email })
 
+            const result = await queryItems(userId)
+
+            console.log("on remove result", result)
+
         } catch (err) {
             if (err?.name === "ConditionalCheckFailedException") {
                 console.info("onAuthStream: déjà présent (idempotent), on continue");
@@ -47,6 +52,21 @@ export const handler = async (event) => {
             console.error("onAuthStream: erreur non-idempotente", { name: err?.name, message: err?.message });
             throw err;
         }
+    }
+}
+
+async function queryItems(userId){
+    try {
+        const res = await queryDb({
+            TableName: TOKEN_TABLE,
+            IndexName: "GSI1",
+            KeyConditionExpression: "userId = :uid",
+            ExpressionAttributeValues: { ":uid": userId },
+            ProjectionExpression: "PK, SK"
+        })
+    } catch(err) {
+        console.log("query error", err)
+        return err
     }
 }
 
