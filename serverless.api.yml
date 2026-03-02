@@ -323,13 +323,13 @@ functions:
           - dynamodb:ConditionCheckItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
-          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
+          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
       
       - Effect: Allow
         Action:
           - dynamodb:Query
         Resource: 
-          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
+          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
 
       - Effect: Allow
         Action:
