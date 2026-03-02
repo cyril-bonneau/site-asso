@@ -37,7 +37,7 @@ export const handler = async (event) => {
 
             const itterationResult = itterateInsideArray(result, userId)
 
-            console.log("itterateResult", itterationResult);
+            console.log("itterateResult", JSON.stringify(itterationResult, null, 2));
 
             await removeUserWithUniqueEmail({ userId, email })
 
