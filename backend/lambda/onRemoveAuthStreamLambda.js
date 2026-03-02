@@ -37,6 +37,7 @@ export const handler = async (event) => {
             const result = await queryItems(userId)
 
             console.log("on remove result", result)
+            console.log("quel taille tu fais ?", result.length)
 
         } catch (err) {
             if (err?.name === "ConditionalCheckFailedException") {
