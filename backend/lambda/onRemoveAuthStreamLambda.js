@@ -39,9 +39,7 @@ export const handler = async (event) => {
 
             console.log("itterateResult", JSON.stringify(itterationResult, null, 2));
 
-            await removeUserWithUniqueEmail({ userId, email })
-
-
+            await removeUserWithUniqueEmail({ userId, email, itterationResult })
 
         } catch (err) {
             if (err?.name === "ConditionalCheckFailedException") {
@@ -92,7 +90,7 @@ function itterateInsideArray(result, userId){
     return arrayItterationResult;
 }
 
-async function removeUserWithUniqueEmail({ userId, email }) {
+async function removeUserWithUniqueEmail({ userId, email, itterationResult }) {
 
     const pkEmail = `EMAIL#${email}`
     const skEmail = "UNIQUE"
@@ -120,6 +118,8 @@ async function removeUserWithUniqueEmail({ userId, email }) {
 
     try {
         await sendTransactToDb(removeRequest)
+        removeRequest.push(itterationResult)
+        console.log("remove request", removeRequest)
     } catch (err) {
         console.log("wtf", err)
         if (err?.name === "ConditionalCheckFailedException") {
