@@ -43,5 +43,5 @@ export async function signAccessTokenWithKms(payload = {}, options = {}) {
         throw new Error("KMS_SIGNING_FAILED");
     }
     const signatureB64 = toBase64Url(signRes.Signature);
-    return `${dataToSign}.${signatureB64}`;
+    return `${headerB64}.${payloadB64}.${signatureB64}`;
 }
