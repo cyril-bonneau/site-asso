@@ -134,7 +134,7 @@ functions:
 
     events:
       - httpApi:
-          method: GET
+          method: POST
           path: /login
 
   updateAuthUser:
