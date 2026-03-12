@@ -11,7 +11,22 @@ provider:
   stage: ${opt:stage, 'dev'}
   memorySize: 256
   timeout: 12
-  # httpApi:
+  httpApi:
+    cors:
+      allowedOrigins:
+        - d31zmdqaouls9b.cloudfront.net
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - Accept
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
   #   throttling:
   #     burstLimit: 50 #pics max
   #     rateLimit: 25 #req/s

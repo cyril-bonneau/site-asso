@@ -43,13 +43,12 @@ export function hashRefreshToken(refreshToken) {
 
 export function buildRefreshCookie(refreshToken) {
     const stage = process.env.STAGE || "dev";
-    const isProd = stage === "prod";
+    // const isProd = stage === "prod";
 
     const maxAgeSec = 10 * 24 * 60 * 60; // 10 jours
-    const securePart = isProd ? " Secure;" : "";
-    const sameSite = "Lax"; // ou Strict si tu veux être super strict
+    const sameSite = "None"; // ou Strict si tu veux être super strict
 
-    return `refreshToken=${refreshToken}; HttpOnly;${securePart} SameSite=${sameSite}; Path=/; Max-Age=${maxAgeSec}`;
+    return `refreshToken=${refreshToken}; HttpOnly; Secure; SameSite=${sameSite}; Path=/; Max-Age=${maxAgeSec}`;
 }
 
 // algo must be HS256 or other symmetric algorithm
