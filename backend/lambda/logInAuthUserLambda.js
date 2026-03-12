@@ -21,9 +21,9 @@ const REFRESH_JWT_HMAC = crypto
  * sans bloquer la route pour les utilisateurs non connectés.
  */
 export const handler = withRateLimit(withOptionalAuth(handlerCore), {
-    scope:         "login",
-    capacity:      3,
-    refillRate:    0.005,
+    scope: "login",
+    capacity: 3,
+    refillRate: 0.005,
     windowSeconds: true,
 });
 
@@ -47,9 +47,10 @@ async function handlerCore(event, _context, { auth }) {
         // --- Utilisateur déjà authentifié ---
         // Son access token est encore valide → pas besoin de refaire un login complet.
         if (auth !== null) {
+            console.log(`[loginUser] Utilisateur déjà authentifié (userId: ${auth.userId}) - accès à /login autorisé mais pas de nouveau token émis.`);
             return json(200, {
-                ok:      true,
-                userId:  auth.userId,
+                ok: true,
+                userId: auth.userId,
                 message: "ALREADY_AUTHENTICATED",
             });
         }
@@ -93,15 +94,15 @@ async function loginCore({ email, password }) {
         }
 
         const accessTokenPayload = { userId, privilege };
-        const accessToken        = await signAccessTokenWithKms(accessTokenPayload);
+        const accessToken = await signAccessTokenWithKms(accessTokenPayload);
         const refreshTokenCookie = await generateNewRefreshToken(userId, REFRESH_JWT_HMAC);
 
         return json(
             200,
             {
-                ok:          true,
-                userId:      userId,
-                message:     "LOGGED_IN",
+                ok: true,
+                userId: userId,
+                message: "LOGGED_IN",
                 accessToken: accessToken,
             },
             {
