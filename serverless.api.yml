@@ -19,6 +19,7 @@ provider:
         - Content-Type
         - Authorization
         - Accept
+        - X-Requested-With
       allowedMethods:
         - GET
         - POST
