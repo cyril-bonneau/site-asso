@@ -61,10 +61,7 @@ async function registerUserCore(event) {
         }
 
         const userId = res.userId;
-        const iss = process.env.ISSUER
-        const iat = Math.floor(Date.now() / 1000);
-        const exp = iat + 15 * 60; // 15 minutes
-        const payload = { iss, iat, exp, userId, privilege };
+        const payload = { userId, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
         console.log("accessToken", accessToken)
 

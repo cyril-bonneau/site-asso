@@ -1,7 +1,8 @@
 import { unmarshall } from "@aws-sdk/util-dynamodb";
-import { sendTransactToDb } from "../dal/requestToDb.js";
+import { sendTransactToDb, queryDb } from "../dal/requestToDb.js";
 
 const USER_TABLE = process.env.USER_TABLE;
+const TOKEN_TABLE = process.env.REFRESH_TOKEN_TABLE
 
 const RETRYABLE = new Set([
     "ProvisionedThroughputExceededException",
@@ -30,8 +31,15 @@ export const handler = async (event) => {
                 console.warn("onAuthStream: record incomplet (skip)", { hasEmail: !!email });
                 continue;
             }
+            const result = await queryItems(userId)
+            console.log("on remove result", result)
+            console.log("quel taille tu fais ?", result.length)
 
-            await removeUserWithUniqueEmail({ userId, email })
+            const itterationResult = itterateInsideArray(result, userId)
+
+            console.log("itterateResult", JSON.stringify(itterationResult, null, 2));
+
+            await removeUserWithUniqueEmail({ userId, email, itterationResult })
 
         } catch (err) {
             if (err?.name === "ConditionalCheckFailedException") {
@@ -50,7 +58,39 @@ export const handler = async (event) => {
     }
 }
 
-async function removeUserWithUniqueEmail({ userId, email }) {
+async function queryItems(userId){
+    try {
+        const res = await queryDb({
+            TableName: TOKEN_TABLE,
+            IndexName: "GSI1",
+            KeyConditionExpression: "userId = :uid",
+            ExpressionAttributeValues: { ":uid": userId },
+            ProjectionExpression: "PK, SK"
+        })
+
+        return res
+    } catch(err) {
+        console.log("query error", err)
+        return err
+    }
+}
+
+function itterateInsideArray(result, userId){
+    let arrayItterationResult = [];
+    for(let i = 0; i < result.length; i ++){
+        arrayItterationResult.push({
+            Delete: {
+                TableName: TOKEN_TABLE,
+                Key: { PK: result[i].PK, SK: result[i].SK },
+                ConditionExpression: "userId = :uid",
+                ExpressionAttributeValues: { ":uid":userId }
+            }
+        })
+    }
+    return arrayItterationResult;
+}
+
+async function removeUserWithUniqueEmail({ userId, email, itterationResult }) {
 
     const pkEmail = `EMAIL#${email}`
     const skEmail = "UNIQUE"
@@ -78,6 +118,8 @@ async function removeUserWithUniqueEmail({ userId, email }) {
 
     try {
         await sendTransactToDb(removeRequest)
+        removeRequest.push(itterationResult)
+        console.log("remove request", removeRequest)
     } catch (err) {
         console.log("wtf", err)
         if (err?.name === "ConditionalCheckFailedException") {

@@ -316,6 +316,7 @@ functions:
     timeout: 30
     environment:
       USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
+      REFRESH_TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
     events:
       - stream:
           type: dynamodb
@@ -337,6 +338,13 @@ functions:
           - dynamodb:ConditionCheckItem
         Resource:
           - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
+      
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}/index/*
 
       - Effect: Allow
         Action:
