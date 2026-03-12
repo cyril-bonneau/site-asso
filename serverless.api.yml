@@ -14,7 +14,7 @@ provider:
   httpApi:
     cors:
       allowedOrigins:
-        - d31zmdqaouls9b.cloudfront.net
+        - https://d31zmdqaouls9b.cloudfront.net
       allowedHeaders:
         - Content-Type
         - Authorization
