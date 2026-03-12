@@ -39,6 +39,9 @@ provider:
     STAGE: ${sls:stage}
     JWT_ACCESS_PUB_SSM_PARAM: /site-asso/${sls:stage}/cfg/jwtAccessPub
     ISSUER: site-asso-${sls:stage}
+    ALLOWED_ORIGINS: 'https://d31zmdqaouls9b.cloudfront.net'
+    JWT_ISSUER: 'site-asso/api'
+    JWT_AUDIENCE: 'site-asso/frontend'
 
 plugins:
   # - ./backend/node_modules/serverless-esbuild
@@ -151,6 +154,28 @@ functions:
       - httpApi:
           method: POST
           path: /login
+
+  getUser:
+    handler: backend/lambda/getUserLambda.handler
+    memorySize: 512
+    architecture: arm64
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - ${cf:site-asso-infra-${sls:stage}.DdbUserTableArn}
+
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/site-asso/${sls:stage}/*
+
+    events:
+      - httpApi:
+          method: GET
+          path: /user
 
   updateAuthUser:
     handler: backend/lambda/updateAuthUserLambda.handler

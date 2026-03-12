@@ -1,165 +1,228 @@
-import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js"
-import { parse } from "cookie"
+import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
+import { parse } from "cookie";
 import { getFromDb, sendUpdateToDb } from "../dal/requestToDb.js";
 import { jwtVerify } from "jose";
 import { json, hashRefreshToken } from "../helpers/toolbox.js";
+import { validateCsrfHeaders } from "../helpers/validateCsrf.js";
 import crypto from "crypto";
 import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 
-const TOKEN_TABLE = process.env.TOKEN_TABLE
-const USER_TABLE = process.env.USER_TABLE
+const TOKEN_TABLE = process.env.TOKEN_TABLE;
+const USER_TABLE  = process.env.USER_TABLE;
+
+// Clé HMAC pour signer/vérifier les refresh tokens (HS256)
 const REFRESH_JWT_HMAC = crypto
     .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
 
+/**
+ * Handler principal : émet un nouvel access token à partir du refresh token cookie.
+ *
+ * Flux :
+ *  1. Protection CSRF : vérifie Origin + X-Requested-With (SameSite=None oblige)
+ *  2. Extraction du refresh token depuis le cookie httpOnly
+ *  3. Vérification de la signature HS256 et de l'expiration du refresh token
+ *  4. Décrémentation atomique de useRemaining en DynamoDB (avec condition d'expiration)
+ *  5. Récupération du profil utilisateur en base
+ *  6. Émission d'un nouvel access token (RS256 via KMS)
+ *  7. Si useRemaining atteint 0 → rotation du refresh token (nouveau cookie)
+ */
 export const handler = async (event) => {
     try {
 
-        // scénario :
-        // le front fait un appel à cette lambda pour rafraîchir son auth user lorsque l'access token est à 5min d'éxpirer
-        // le front envoi alors le refresh token stocké dans les cookies httpOnly et l'access token dans l'entête Authorization Bearer
+        // --- Étape 1 : protection CSRF ---
+        // Cette route utilise uniquement le cookie httpOnly (pas de Bearer token).
+        // Sans cette vérification, SameSite=None + credentials:include = CSRF possible.
+        const csrfCheck = validateCsrfHeaders(event);
+        if (!csrfCheck.ok) {
+            console.warn("[refreshAuthUser] Requête bloquée par la protection CSRF :", csrfCheck.reason);
+            return json(403, { ok: false, message: "FORBIDDEN", code: "CSRF_VALIDATION_FAILED" });
+        }
 
-        // 1. récupérer le refresh token dans les cookies
-        // 2. vérifier et décoder le refresh token
-        // 3. hash le refresh token et récupérer les données en base
-        // 4. Tente un update de décrément de useRemaining du refresh token en base
-        // si échec, renvoyer une erreur 401 (token invalide, expiré ou plus de useRemaining)
-        // 5. récupérer les infos user en base
-        // 6. générer un nouvel access token
-        // 7. si le refresh token a plus de 30min, en générer un nouveau et le stocker en base + renvoyer le cookie au front
-        const refreshToken = getRefreshTokenFromEvent(event);
-        if (refreshToken === null) return json(401, { ok: false, message: "REFRESH_TOKEN_NOT_FOUND" })
+        // --- Étape 2 : extraction du refresh token depuis le cookie ---
+        const refreshToken = extractRefreshTokenFromCookies(event);
+        if (refreshToken === null) {
+            return json(401, { ok: false, message: "REFRESH_TOKEN_NOT_FOUND" });
+        }
 
-        const result = await getRefreshTokenData(refreshToken);
+        // --- Étape 3 : vérification de la signature et de l'expiration du refresh token ---
+        const refreshTokenData = await verifyAndDecodeRefreshToken(refreshToken);
 
-        const refreshHash = hashRefreshToken(refreshToken);
-        // console.log("refreshHash", refreshHash)
+        // --- Étape 4 : décrémentation atomique en DynamoDB ---
+        // La condition DynamoDB garantit : token existant + useRemaining > 0 + non expiré
+        const refreshTokenHash  = hashRefreshToken(refreshToken);
+        const updatedTokenEntry = await decrementRefreshTokenUsage(refreshTokenHash);
 
-        const updatedData = await updateRefreshTokenUsage(refreshHash);
+        // --- Étape 5 : récupération du profil utilisateur ---
+        const userProfile = await fetchUserProfile(refreshTokenData.userId);
 
-        const userData = await getUserData(result.userId);
-
-        const payload = {
-            userId: userData.userId,
-            email: userData.email,
-            privilege: userData.privilege
+        // --- Étape 6 : émission d'un nouvel access token ---
+        const accessTokenPayload = {
+            userId:    userProfile.userId,
+            privilege: userProfile.privilege,
         };
+        const newAccessToken = await signAccessTokenWithKms(accessTokenPayload);
 
-        const accessToken = await signAccessTokenWithKms(payload);
-
-        if (updatedData.useRemaining <= 0) { // update only when useRemaining equal 0
-            const cookieString = await generateNewRefreshToken(result.userId, REFRESH_JWT_HMAC, refreshHash);
+        // --- Étape 7 : rotation du refresh token si useRemaining atteint 0 ---
+        // Quand useRemaining <= 0, le token est épuisé → on en génère un nouveau
+        // et on supprime l'ancien de manière atomique en DynamoDB.
+        if (updatedTokenEntry.useRemaining <= 0) {
+            const newRefreshTokenCookie = await generateNewRefreshToken(
+                refreshTokenData.userId,
+                REFRESH_JWT_HMAC,
+                refreshTokenHash, // passé pour supprimer l'ancien token atomiquement
+            );
 
             return json(
                 200,
                 {
-                    userId: userData.userId,
-                    message: "AUTH_VALIDATED",
-                    accessToken,
+                    ok:          true,
+                    userId:      userProfile.userId,
+                    message:     "AUTH_VALIDATED",
+                    accessToken: newAccessToken,
                 },
                 {
-                    "Set-Cookie": cookieString
+                    "Set-Cookie": newRefreshTokenCookie,
                 }
             );
         }
 
+        // Pas de rotation nécessaire : on renvoie juste le nouvel access token
         return json(200, {
-            userId: userData.userId,
-            message: "AUTH_VALIDATED",
-            accessToken,
+            ok:          true,
+            userId:      userProfile.userId,
+            message:     "AUTH_VALIDATED",
+            accessToken: newAccessToken,
         });
 
     } catch (err) {
-        console.error("Fatal error in refresh auth user handler:", err);
-        if (err.message === "REFRESH_TOKEN_NOT_FOUND" ||
-            err.message === "REFRESH_TOKEN_INVALID" ||
-            err.message === "REFRESH_TOKEN_EXPIRED" ||
-            err.message === "USER_NOT_FOUND" ||
-            err instanceof ConditionalCheckFailedException) {
+        console.error("[refreshAuthUser] Erreur fatale :", err.message);
+
+        // Erreurs attendues → 401 (token invalide, expiré, introuvable, épuisé)
+        const isExpectedAuthError = (
+            err.message === "REFRESH_TOKEN_NOT_FOUND"   ||
+            err.message === "REFRESH_TOKEN_INVALID"     ||
+            err.message === "REFRESH_TOKEN_EXPIRED"     ||
+            err.message === "USER_NOT_FOUND"            ||
+            err instanceof ConditionalCheckFailedException
+        );
+
+        if (isExpectedAuthError) {
             return json(401, { ok: false, message: err.message });
         }
-        return json(500, { ok: false, message: err.message || "INTERNAL_ERROR" });
+
+        // Erreur inattendue → message générique pour ne pas exposer les détails internes
+        return json(500, { ok: false, message: "INTERNAL_ERROR" });
     }
+};
+
+/**
+ * Extrait le refresh token depuis les cookies de l'événement Lambda.
+ * Retourne null si aucun cookie n'est présent ou si le cookie refreshToken est absent.
+ *
+ * @param {Object} event - Événement Lambda
+ * @returns {string|null}
+ */
+function extractRefreshTokenFromCookies(event) {
+    if (!event.cookies || event.cookies.length === 0) {
+        return null;
+    }
+
+    const parsedCookies = parse(event.cookies.join("; "));
+
+    return parsedCookies.refreshToken ?? null;
 }
 
-function getRefreshTokenFromEvent(event) {
-    if (!event.cookies) return null;
-
-    const parsed = parse(event.cookies.join("; "));
-    return parsed.refreshToken ?? null;
-}
-
-// algo must be HS256 or other symmetric algorithm
-async function getRefreshTokenData(refreshToken) {
+/**
+ * Vérifie la signature HS256 du refresh token et contrôle son expiration manuelle.
+ *
+ * Note : le refresh token utilise un claim personnalisé `expiredAt` (et non `exp`)
+ * donc l'expiration est vérifiée manuellement après la vérification de signature.
+ *
+ * Toutes les erreurs sont normalisées en REFRESH_TOKEN_INVALID pour ne pas
+ * révéler la raison exacte du rejet au client.
+ *
+ * @param {string} refreshToken - Token JWT brut extrait du cookie
+ * @returns {Promise<{ userId: string, issuedAt: number, expiredAt: number }>}
+ */
+async function verifyAndDecodeRefreshToken(refreshToken) {
     try {
-        const { payload } = await jwtVerify(
-            refreshToken,
-            REFRESH_JWT_HMAC,
-            {
-                algorithms: ['HS256'],
-                // issuer: 'site-asso/api',
-                // audience: 'site-asso/frontend',
-            }
-        )
+        const { payload } = await jwtVerify(refreshToken, REFRESH_JWT_HMAC, {
+            algorithms: ["HS256"],
+        });
 
-        console.log("refresh token payload", payload)
+        const nowSeconds = Math.floor(Date.now() / 1000);
 
-        const nowSec = Math.floor(Date.now() / 1000)
-        if (payload.expiredAt < nowSec) {
-            throw new Error("REFRESH_TOKEN_EXPIRED")
+        if (payload.expiredAt < nowSeconds) {
+            throw new Error("REFRESH_TOKEN_EXPIRED");
         }
+
         return {
-            userId: payload.userId,
-            issuedAt: payload.issuedAt,
+            userId:    payload.userId,
+            issuedAt:  payload.issuedAt,
             expiredAt: payload.expiredAt,
-        }
+        };
+
     } catch (err) {
-        throw new Error("REFRESH_TOKEN_INVALID")
+        // Normalisation : on ne distingue pas signature invalide / expirée / malformée
+        throw new Error("REFRESH_TOKEN_INVALID");
     }
 }
 
 /**
- * normally should return :
- * {
- *   userId: 'USER#uuid',
- *   email: 'user email',
- *   firstName: 'First',
- *   lastName: 'Last',
- *   privilege: 'user|admin',
- *   createdAt: timestamp,
- * }
-*/
-async function getUserData(userId) {
-    const req = {
+ * Récupère le profil utilisateur depuis DynamoDB.
+ * Contient : userId, email, firstName, lastName, privilege, createdAt
+ *
+ * @param {string} userId - Identifiant utilisateur brut (sans préfixe "USER#")
+ * @returns {Promise<Object>}
+ */
+async function fetchUserProfile(userId) {
+    const getRequest = {
         TableName: USER_TABLE,
         Key: {
             PK: `USER#${userId}`,
             SK: `PROFILE#${userId}`,
-        }
+        },
+    };
+
+    const userProfile = await getFromDb(getRequest);
+
+    if (userProfile === undefined) {
+        throw new Error("USER_NOT_FOUND");
     }
-    const data = await getFromDb(req);
-    if (data === undefined) {
-        throw new Error("USER_NOT_FOUND")
-    }
-    return data;
+
+    return userProfile;
 }
 
-async function updateRefreshTokenUsage(refreshHash) {
-
-    const req = {
+/**
+ * Décrémente atomiquement le compteur useRemaining du refresh token en DynamoDB.
+ *
+ * La condition DynamoDB garantit que l'opération échoue si :
+ *   - Le token n'existe pas en base (PK absent)
+ *   - Le compteur useRemaining est déjà à 0 (token épuisé)
+ *   - Le token est expiré en base (expiredAt dépassé)
+ *
+ * En cas d'échec de condition → ConditionalCheckFailedException → 401 dans le handler.
+ *
+ * @param {string} refreshTokenHash - Hash SHA-256 du refresh token (clé de partition)
+ * @returns {Promise<{ useRemaining: number }>}
+ */
+async function decrementRefreshTokenUsage(refreshTokenHash) {
+    const updateRequest = {
         TableName: TOKEN_TABLE,
         Key: {
-            PK: refreshHash,
-            SK: 'REFRESH',
+            PK: refreshTokenHash,
+            SK: "REFRESH",
         },
-        UpdateExpression: "SET useRemaining = useRemaining - :dec",
+        UpdateExpression: "SET useRemaining = useRemaining - :decrement",
         ExpressionAttributeValues: {
-            ":dec": 1,
-            ":now": Math.floor(Date.now() / 1000),
-            ":zero": 0
+            ":decrement": 1,
+            ":now":       Math.floor(Date.now() / 1000),
+            ":zero":      0,
         },
         ConditionExpression: "attribute_exists(PK) AND useRemaining > :zero AND expiredAt > :now",
-        ReturnValues: "UPDATED_NEW"
-    }
-    return await sendUpdateToDb(req);
+        ReturnValues: "UPDATED_NEW",
+    };
+
+    return await sendUpdateToDb(updateRequest);
 }
