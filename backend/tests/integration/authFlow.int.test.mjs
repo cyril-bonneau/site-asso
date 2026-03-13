@@ -52,7 +52,9 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.accessToken).toBeDefined();
 
         accessToken = response.body.accessToken;
-        refreshToken = response.headers["Set-Cookie"];
+        console.log("response cookies", response.cookies.find(cookie => cookie.startsWith("refreshToken="))?.split(";")[0].split("=")[1]);
+        console.log("response cookies 2", response.cookies[0]);
+        refreshToken = response.cookies.find(cookie => cookie.startsWith("refreshToken="))?.split(";")[0].split("=")[1];
 
         console.log("RegisterUser Lambda response body:", response.body.accessToken);
 
