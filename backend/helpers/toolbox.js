@@ -15,13 +15,14 @@ export function decode(payload) {
     };
 }
 
-export function json(statusCode, body, headers = undefined) {
+export function json(statusCode, body, cookies, headers) {
     return {
         statusCode,
         headers: {
             "content-type": "application/json",
             ...(headers ?? {}),
         },
+        cookies: cookies ?? [],
         body: JSON.stringify(body ?? {}),
     };
 }
@@ -56,10 +57,10 @@ export async function generateRefreshToken(userId, REFRESH_JWT_HMAC) {
     const nowSec = Math.floor(Date.now() / 1000);
     const refreshTokenPayload = {
         userId: userId,
-        iss:    process.env.JWT_ISSUER   || "site-asso/api",
-        aud:    process.env.JWT_AUDIENCE || "site-asso/frontend",
-        iat:    nowSec,                         // issued at   — RFC 7519 §4.1.6
-        exp:    nowSec + (10 * 24 * 60 * 60),  // expiration  — RFC 7519 §4.1.4 — validé par jwtVerify()
+        iss: process.env.JWT_ISSUER || "site-asso/api",
+        aud: process.env.JWT_AUDIENCE || "site-asso/frontend",
+        iat: nowSec,                         // issued at   — RFC 7519 §4.1.6
+        exp: nowSec + (10 * 24 * 60 * 60),  // expiration  — RFC 7519 §4.1.4 — validé par jwtVerify()
     };
     const refreshToken = await new SignJWT(refreshTokenPayload)
         .setProtectedHeader({ alg: "HS256" })

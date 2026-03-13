@@ -82,9 +82,7 @@ async function registerUserCore(event) {
                         accessToken: accessToken,
                         message: res.message
                     },
-                    {
-                        "Set-Cookie": cookieString
-                    }
+                    [cookieString]
                 );
             }
         } catch (err) {

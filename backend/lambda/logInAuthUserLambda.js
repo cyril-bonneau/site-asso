@@ -105,9 +105,7 @@ async function loginCore({ email, password }) {
                 message: "LOGGED_IN",
                 accessToken: accessToken,
             },
-            {
-                "Set-Cookie": refreshTokenCookie,
-            }
+            [refreshTokenCookie],
         );
 
     } catch (err) {

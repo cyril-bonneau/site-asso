@@ -9,7 +9,7 @@ import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 
 const TOKEN_TABLE = process.env.TOKEN_TABLE;
-const USER_TABLE  = process.env.USER_TABLE;
+const USER_TABLE = process.env.USER_TABLE;
 
 // Clé HMAC pour signer/vérifier les refresh tokens (HS256)
 const REFRESH_JWT_HMAC = crypto
@@ -50,7 +50,7 @@ export const handler = async (event) => {
 
         // --- Étape 4 : décrémentation atomique en DynamoDB ---
         // La condition DynamoDB garantit : token existant + useRemaining > 0 + non expiré
-        const refreshTokenHash  = hashRefreshToken(refreshToken);
+        const refreshTokenHash = hashRefreshToken(refreshToken);
         const updatedTokenEntry = await decrementRefreshTokenUsage(refreshTokenHash);
 
         // --- Étape 5 : récupération du profil utilisateur ---
@@ -58,7 +58,7 @@ export const handler = async (event) => {
 
         // --- Étape 6 : émission d'un nouvel access token ---
         const accessTokenPayload = {
-            userId:    userProfile.userId,
+            userId: userProfile.userId,
             privilege: userProfile.privilege,
         };
         const newAccessToken = await signAccessTokenWithKms(accessTokenPayload);
@@ -76,22 +76,20 @@ export const handler = async (event) => {
             return json(
                 200,
                 {
-                    ok:          true,
-                    userId:      userProfile.userId,
-                    message:     "AUTH_VALIDATED",
+                    ok: true,
+                    userId: userProfile.userId,
+                    message: "AUTH_VALIDATED",
                     accessToken: newAccessToken,
                 },
-                {
-                    "Set-Cookie": newRefreshTokenCookie,
-                }
+                [newRefreshTokenCookie]
             );
         }
 
         // Pas de rotation nécessaire : on renvoie juste le nouvel access token
         return json(200, {
-            ok:          true,
-            userId:      userProfile.userId,
-            message:     "AUTH_VALIDATED",
+            ok: true,
+            userId: userProfile.userId,
+            message: "AUTH_VALIDATED",
             accessToken: newAccessToken,
         });
 
@@ -100,10 +98,10 @@ export const handler = async (event) => {
 
         // Erreurs attendues → 401 (token invalide, expiré, introuvable, épuisé)
         const isExpectedAuthError = (
-            err.message === "REFRESH_TOKEN_NOT_FOUND"   ||
-            err.message === "REFRESH_TOKEN_INVALID"     ||
-            err.message === "REFRESH_TOKEN_EXPIRED"     ||
-            err.message === "USER_NOT_FOUND"            ||
+            err.message === "REFRESH_TOKEN_NOT_FOUND" ||
+            err.message === "REFRESH_TOKEN_INVALID" ||
+            err.message === "REFRESH_TOKEN_EXPIRED" ||
+            err.message === "USER_NOT_FOUND" ||
             err instanceof ConditionalCheckFailedException
         );
 
@@ -149,8 +147,8 @@ async function verifyAndDecodeRefreshToken(refreshToken) {
     try {
         const { payload } = await jwtVerify(refreshToken, REFRESH_JWT_HMAC, {
             algorithms: ["HS256"],
-            issuer:     process.env.JWT_ISSUER   || "site-asso/api",
-            audience:   process.env.JWT_AUDIENCE || "site-asso/frontend",
+            issuer: process.env.JWT_ISSUER || "site-asso/api",
+            audience: process.env.JWT_AUDIENCE || "site-asso/frontend",
         });
 
         return {
@@ -211,8 +209,8 @@ async function decrementRefreshTokenUsage(refreshTokenHash) {
         UpdateExpression: "SET useRemaining = useRemaining - :decrement",
         ExpressionAttributeValues: {
             ":decrement": 1,
-            ":now":       Math.floor(Date.now() / 1000),
-            ":zero":      0,
+            ":now": Math.floor(Date.now() / 1000),
+            ":zero": 0,
         },
         ConditionExpression: "attribute_exists(PK) AND useRemaining > :zero AND expiredAt > :now",
         ReturnValues: "UPDATED_NEW",
