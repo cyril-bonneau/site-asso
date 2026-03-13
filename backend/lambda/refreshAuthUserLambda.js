@@ -134,33 +134,27 @@ function extractRefreshTokenFromCookies(event) {
 }
 
 /**
- * Vérifie la signature HS256 du refresh token et contrôle son expiration manuelle.
+ * Vérifie la signature HS256 du refresh token et son expiration.
  *
- * Note : le refresh token utilise un claim personnalisé `expiredAt` (et non `exp`)
- * donc l'expiration est vérifiée manuellement après la vérification de signature.
+ * jose.jwtVerify() valide automatiquement le claim standard `exp` (RFC 7519 §4.1.4).
+ * Si le token est expiré ou si la signature est invalide, jose lève une erreur.
  *
  * Toutes les erreurs sont normalisées en REFRESH_TOKEN_INVALID pour ne pas
  * révéler la raison exacte du rejet au client.
  *
  * @param {string} refreshToken - Token JWT brut extrait du cookie
- * @returns {Promise<{ userId: string, issuedAt: number, expiredAt: number }>}
+ * @returns {Promise<{ userId: string }>}
  */
 async function verifyAndDecodeRefreshToken(refreshToken) {
     try {
         const { payload } = await jwtVerify(refreshToken, REFRESH_JWT_HMAC, {
             algorithms: ["HS256"],
+            issuer:     process.env.JWT_ISSUER   || "site-asso/api",
+            audience:   process.env.JWT_AUDIENCE || "site-asso/frontend",
         });
 
-        const nowSeconds = Math.floor(Date.now() / 1000);
-
-        if (payload.expiredAt < nowSeconds) {
-            throw new Error("REFRESH_TOKEN_EXPIRED");
-        }
-
         return {
-            userId:    payload.userId,
-            issuedAt:  payload.issuedAt,
-            expiredAt: payload.expiredAt,
+            userId: payload.userId,
         };
 
     } catch (err) {

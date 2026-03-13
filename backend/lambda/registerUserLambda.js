@@ -63,7 +63,6 @@ async function registerUserCore(event) {
         const userId = res.userId;
         const payload = { userId, privilege };
         const accessToken = await signAccessTokenWithKms(payload);
-        console.log("accessToken", accessToken)
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = { email, firstName, lastName, userId, privilege }; // pas besoin d'une fonction juste les accolades et ça va fonctionner
