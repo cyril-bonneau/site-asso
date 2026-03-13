@@ -52,9 +52,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.accessToken).toBeDefined();
 
         accessToken = response.body.accessToken;
-        console.log("response cookies", response.cookies.find(cookie => cookie.startsWith("refreshToken="))?.split(";")[0].split("=")[1]);
-        console.log("response cookies 2", response.cookies[0]);
-        refreshToken = response.cookies.find(cookie => cookie.startsWith("refreshToken="))?.split(";")[0].split("=")[1];
+        refreshToken = response.cookies[0];
 
         console.log("RegisterUser Lambda response body:", response.body.accessToken);
 
@@ -97,7 +95,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.userId).toBeDefined();
         expect(response.body.ok).toBe(true);
         expect(response.body.accessToken).toBeDefined();
-        expect(response.headers["Set-Cookie"]).toBeDefined();
+        expect(response.cookies[0]).toBeDefined();
         expect(response.body.message).toBe("LOGGED_IN");
 
     });
