@@ -156,6 +156,24 @@ functions:
           method: POST
           path: /login
 
+  logoutUser:
+    handler: backend/lambda/logoutAuthUserLambda.handler
+    memorySize: 512
+    architecture: arm64
+    environment:
+      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: 
+          - ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
+
+    events:
+      - httpApi:
+          method: POST
+          path: /logout
+
   getUser:
     handler: backend/lambda/getUserLambda.handler
     memorySize: 512

@@ -64,6 +64,8 @@ async function handlerCore(event, _context, { auth }) {
 
         const { email, password } = input.body.data;
 
+        console.log(`[loginUser] Tentative de connexion pour email: ${email} - User-Agent: ${event.headers ? event.headers["user-agent"] : "unknown"}`);
+
         return await loginCore({ email, password });
 
     } catch (err) {
