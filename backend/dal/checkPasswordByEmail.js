@@ -1,4 +1,4 @@
-import { getFromDb, queryDb } from "./requestToDb.js";
+import { getFromDb } from "./requestToDb.js";
 
 import { verifyPassword } from "../auth/auth.js";
 
@@ -47,7 +47,8 @@ async function getAuthByEmail(email) {
             ProjectionExpression: "userId",
         });
         console.log("getAuthByEmail - userId get result:", userId);
-        userId = userId.split("#")[1]; // Extraire l'userId du format "USER#<userId>"
+        const index = userId.indexOf("#"); // Extraire l'userId du format "USER#<userId>"
+        userId = index === -1 ? null : userId.slice(index + 1);
         console.log("getAuthByEmail - extracted userId:", userId);
 
         const passwordHash = await getFromDb({
