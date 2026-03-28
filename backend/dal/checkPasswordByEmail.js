@@ -46,8 +46,9 @@ async function getAuthByEmail(email) {
             },
             ProjectionExpression: "userId",
         });
-
+        console.log("getAuthByEmail - userId get result:", userId);
         userId = userId.split("#")[1]; // Extraire l'userId du format "USER#<userId>"
+        console.log("getAuthByEmail - extracted userId:", userId);
 
         const passwordHash = await getFromDb({
             TableName: AUTH_TABLE,
@@ -57,13 +58,18 @@ async function getAuthByEmail(email) {
             },
             ProjectionExpression: "passwordHash",
         })
+
+        console.log("getAuthByEmail - passwordHash get result:", passwordHash);
         
         const res = {
             userId,
             passwordHash
         }
-        
+
+        console.log("getAuthByEmail - auth result before privilege:", res);
+
         res.privilege = await getPrivilegeByUserId(userId)
+        console.log("getAuthByEmail - final auth result:", res);
         return res
     } catch (err) {
         console.error("getAuthByEmail error:", err);
