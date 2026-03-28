@@ -68,17 +68,6 @@ resources:
                 - SK
                 - userId
                 - createdAt
-
-          - IndexName: GSI1v6
-            KeySchema:
-              - { AttributeName: GSI1PK, KeyType: HASH }
-              - { AttributeName: GSI1SK, KeyType: RANGE }
-            Projection:
-              ProjectionType: INCLUDE
-              NonKeyAttributes:
-                - passwordHash
-                - userId
-                - privilege
         TimeToLiveSpecification:
           AttributeName: TTL
           Enabled: true

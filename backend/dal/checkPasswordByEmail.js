@@ -36,17 +36,35 @@ export async function checkPasswordByEmail({ password, email }) {
 
 async function getAuthByEmail(email) {
     try {
-        const res = await queryDb({
+        let userId;
+
+        userId = await getFromDb({
             TableName: AUTH_TABLE,
-            IndexName: "GSI1v6",
-            KeyConditionExpression: "GSI1PK = :pk",
-            ExpressionAttributeValues: {
-                ":pk": `EMAIL#${email}`,
+            Key: {
+                "PK": `EMAIL#${email}`,
+                "SK": "UNIQUE",
             },
-            ProjectionExpression: "passwordHash, userId",
+            ProjectionExpression: "userId",
+        });
+
+        userId = userId.split("#")[1]; // Extraire l'userId du format "USER#<userId>"
+
+        const passwordHash = await getFromDb({
+            TableName: AUTH_TABLE,
+            Key: {
+                "PK": `USER#${userId}`,
+                "SK": "AUTH",
+            },
+            ProjectionExpression: "passwordHash",
         })
-        res[0].privilege = await getPrivilegeByUserId(res[0].userId)
-        return res[0]
+        
+        const res = {
+            userId,
+            passwordHash
+        }
+        
+        res.privilege = await getPrivilegeByUserId(userId)
+        return res
     } catch (err) {
         console.error("getAuthByEmail error:", err);
         return err
