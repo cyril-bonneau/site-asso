@@ -124,10 +124,9 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-          - dynamodb:Query
+          - dynamodb:GetItem
         Resource: 
           - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}
-          - ${cf:site-asso-infra-${sls:stage}.DdbAuthTableArn}/index/*
 
       - Effect: Allow
         Action:
