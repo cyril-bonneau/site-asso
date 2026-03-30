@@ -1,20 +1,21 @@
 import { nanoid } from "nanoid";
-import crypto from "crypto";
+// import crypto from "crypto";
+import { randomBytes } from "node:crypto";
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
 import { hashPassword } from "../auth/auth.js";
 import { json } from "../helpers/toolbox.js";
-import { sendTransactToDb } from "../dal/requestToDb.js";
+import { sendTransactToDb, sendPutToDb } from "../dal/requestToDb.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
-import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
-import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
+// import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
+// import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 import { validateInput } from "../zod/validateInput.js";
 import { registerInputSchema } from "../zod/zodSchema/registerInputValidation.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
-const REFRESH_JWT_HMAC = crypto
-    .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
+// const REFRESH_JWT_HMAC = crypto
+//     .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
 
 // event must contain email, password in body
 
@@ -61,28 +62,50 @@ async function registerUserCore(event) {
         }
 
         const userId = res.userId;
-        const payload = { userId, privilege };
-        const accessToken = await signAccessTokenWithKms(payload);
+        // const payload = { userId, privilege };
+        // const accessToken = await signAccessTokenWithKms(payload);
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = { email, firstName, lastName, userId, privilege }; // pas besoin d'une fonction juste les accolades et ça va fonctionner
-        const eventEntry = buildUserRegisterEvent(detail);
+        const eventEntry = buildUserRegisterEvent(detail, "UserRegistered");
+        
+        const rawToken = randomBytes(32).toString("base64url");
+
+        try{
+            const putTokenToDb = await createTokenEntry(rawToken, userId);
+            console.log("registerUserCore - createTokenEntry result:", putTokenToDb);
+        } catch(err) {
+            console.error("registerUserCore: error creating token entry in DB", err);
+            return json(500, { ok: false, message: "INTERNAL_ERROR" });
+        }
+
+        const emailValidationEvent = buildUserRegisterEvent(rawToken, "emailValidationToken");
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
+        const emailValidationResult = await eventBridgePutEvents(emailValidationEvent);
+
+        if(emailValidationResult.FailedEntryCount || emailValidationResult.Entries[0].ErrorCode) {
+            console.error("registerUserCore: emailValidation eventBridgePutEvents failed", {
+                FailedEntryCount: emailValidationResult.FailedEntryCount,
+                Entries: emailValidationResult.Entries
+            });
+            // On choisit de continuer le flow de création de compte même si l'événement d'email validation a échoué, car c'est un processus asynchrone qui peut être réessayé côté client ou via une fonction dédiée au renvoi du token de validation.
+        }
 
         try {
-            const cookieString = await generateNewRefreshToken(userId, REFRESH_JWT_HMAC);
+            // const cookieString = await generateNewRefreshToken(userId, REFRESH_JWT_HMAC);
 
             if (!resultEvent.FailedEntryCount) {
+
                 return json(
                     201,
                     {
                         ok: true,
                         userId: userId,
-                        accessToken: accessToken,
+                        // accessToken: accessToken,
                         message: res.message
                     },
-                    [cookieString]
+                    // [cookieString]
                 );
             }
         } catch (err) {
@@ -134,8 +157,6 @@ async function createAuthEntry(email, password) {
                         PK: userId,
                         SK: "AUTH",
                         userId: id,
-                        GSI1PK: userEmail,
-                        GSI1SK: userId,
                         email: email,
                         passwordHash: hashedPwd,
                         createdAt: now,
@@ -160,7 +181,6 @@ async function createAuthEntry(email, password) {
         ];
 
         try {
-
             await sendTransactToDb(transaction, true);
 
             console.info("createAuthEntry success", { email: email, userId: id })
@@ -172,7 +192,6 @@ async function createAuthEntry(email, password) {
             }
 
         } catch (err) {
-
             if (err.name === "TransactionCanceledException" && err.CancellationReasons) {
                 const reasons = err.CancellationReasons.map((r, i) => ({
                     index: i,
@@ -208,17 +227,22 @@ async function createAuthEntry(email, password) {
     }
 }
 
-// function buildUserRegisterDetail({ userId, email, firstName, lastName, privilege }) {
-//     return {
-//         userId: userId,
-//         email: email,
-//         firstName: firstName,
-//         lastName: lastName,
-//         privilege: privilege
-//     }
-// }
+async function createTokenEntry(rawToken, userId){
+    const params = {
+        TableName: TOKEN_TABLE,
+        Item: {
+            PK: rawToken,
+            SK: 'EMAIL_VALIDATION',
+            userId: userId,
+            createdAt: new Date().toISOString(),
+            expiredAt: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
+        }
+    };
+    const result = await sendPutToDb(params);
+    return result;
+}
 
-function buildUserRegisterEvent(detail) {
+function buildUserRegisterEvent(detail, detailType) {
     return {
         Source: "site-asso.auth.register",
         DetailType: "UserRegistered",
