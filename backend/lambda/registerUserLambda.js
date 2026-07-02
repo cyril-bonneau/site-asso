@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-// import crypto from "crypto";
 import { randomBytes } from "node:crypto";
 import { validatePasswordBackend } from "../auth/passwordPolicy.js";
 import { withRateLimit } from "../rateLimit/withRateLimit.js";
@@ -7,15 +6,12 @@ import { hashPassword } from "../auth/auth.js";
 import { json } from "../helpers/toolbox.js";
 import { sendTransactToDb, sendPutToDb } from "../dal/requestToDb.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
-// import { signAccessTokenWithKms } from "../auth/signAccessTokenWithKms.js";
-// import { generateNewRefreshToken } from "../helpers/generateNewRefreshToken.js";
 import { validateInput } from "../zod/validateInput.js";
 import { registerInputSchema } from "../zod/zodSchema/registerInputValidation.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
-// const REFRESH_JWT_HMAC = crypto
-//     .createSecretKey(Buffer.from(process.env.REFRESH_JWT_HMAC, "utf-8"));
+const ACCOUNT_VALIDATION_TABLE = process.env.ACCOUNT_VALIDATION_TABLE;
 
 // event must contain email, password in body
 
@@ -62,19 +58,16 @@ async function registerUserCore(event) {
         }
 
         const userId = res.userId;
-        // const payload = { userId, privilege };
-        // const accessToken = await signAccessTokenWithKms(payload);
 
         // il est attendu au minimum userId, email, firstName, lastName
-        const detail = { email, firstName, lastName, userId, privilege }; // pas besoin d'une fonction juste les accolades et ça va fonctionner
-        const eventEntry = buildUserRegisterEvent(detail, "UserRegistered");
-        
+        const detail = { email, firstName, lastName, userId, privilege };
         const rawToken = randomBytes(32).toString("base64url");
+        const eventEntry = buildUserRegisterEvent(detail, "UserRegistered");
 
-        try{
+        try {
             const putTokenToDb = await createTokenEntry(rawToken, userId);
             console.log("registerUserCore - createTokenEntry result:", putTokenToDb);
-        } catch(err) {
+        } catch (err) {
             console.error("registerUserCore: error creating token entry in DB", err);
             return json(500, { ok: false, message: "INTERNAL_ERROR" });
         }
@@ -84,45 +77,17 @@ async function registerUserCore(event) {
         const resultEvent = await eventBridgePutEvents(eventEntry);
         const emailValidationResult = await eventBridgePutEvents(emailValidationEvent);
 
-        if(emailValidationResult.FailedEntryCount || emailValidationResult.Entries[0].ErrorCode) {
-            console.error("registerUserCore: emailValidation eventBridgePutEvents failed", {
-                FailedEntryCount: emailValidationResult.FailedEntryCount,
-                Entries: emailValidationResult.Entries
-            });
-            // On choisit de continuer le flow de création de compte même si l'événement d'email validation a échoué, car c'est un processus asynchrone qui peut être réessayé côté client ou via une fonction dédiée au renvoi du token de validation.
+        if (!resultEvent.FailedEntryCount && !emailValidationResult.FailedEntryCount) {
+            return json(
+                201,
+                {
+                    ok: true,
+                    userId: userId,
+                    message: res.message
+                }
+            );
         }
-
-        try {
-            // const cookieString = await generateNewRefreshToken(userId, REFRESH_JWT_HMAC);
-
-            if (!resultEvent.FailedEntryCount) {
-
-                return json(
-                    201,
-                    {
-                        ok: true,
-                        userId: userId,
-                        // accessToken: accessToken,
-                        message: res.message
-                    },
-                    // [cookieString]
-                );
-            }
-        } catch (err) {
-            console.warn("registerUserCore: error in refreshTokenPart", { err });
-
-            if (!resultEvent.FailedEntryCount) {
-                return json(
-                    201,
-                    {
-                        ok: true,
-                        userId: userId,
-                        message: res.message
-                    }
-                );
-            }
-        }
-
+        console.warn("registerUserCore: error in refreshTokenPart", { err });
         console.error("registerUserCore: eventBridgePutEvents failed", {
             FailedEntryCount: resultEvent.FailedEntryCount,
             Entries: resultEvent.Entries
@@ -227,9 +192,9 @@ async function createAuthEntry(email, password) {
     }
 }
 
-async function createTokenEntry(rawToken, userId){
+async function createTokenEntry(rawToken, userId) {
     const params = {
-        TableName: TOKEN_TABLE,
+        TableName: ACCOUNT_VALIDATION_TABLE,
         Item: {
             PK: rawToken,
             SK: 'EMAIL_VALIDATION',
@@ -245,7 +210,7 @@ async function createTokenEntry(rawToken, userId){
 function buildUserRegisterEvent(detail, detailType) {
     return {
         Source: "site-asso.auth.register",
-        DetailType: "UserRegistered",
+        DetailType: detailType,
         EventBusName: EVENT_BUS_NAME,
         Detail: JSON.stringify(detail),
     }
