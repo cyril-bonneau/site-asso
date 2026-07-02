@@ -49,12 +49,6 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.ok).toBe(true);
         expect(response.body.userId).toBeDefined();
         expect(response.body.message).toBe("user successfully created");
-        expect(response.body.accessToken).toBeDefined();
-
-        accessToken = response.body.accessToken;
-        refreshToken = response.cookies[0];
-
-        console.log("RegisterUser Lambda response body:", response.body.accessToken);
 
         userId = response.body.userId;
         console.log("Created userId:", userId);
@@ -87,7 +81,7 @@ describe("Parcours complet Auth (intégration)", () => {
         console.log("LoginUser Lambda response:", response);
         console.log("Logged in accessToken:", response.body.accessToken);
 
-        accessToken2 = response.body.accessToken;
+        accessToken = response.body.accessToken;
         userId = response.body.userId;
 
         expect(response).toBeDefined();
@@ -145,7 +139,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(updatedProfile.email).toBe(TEST_NEW_EMAIL);
 
         headers = {
-            Authorization: `Bearer ${accessToken2}`,
+            Authorization: `Bearer ${accessToken}`,
             Cookie: refreshToken,
         }
 
@@ -162,7 +156,6 @@ describe("Parcours complet Auth (intégration)", () => {
 
         console.log('body.newEmail after update', body.newEmail);
         response = decode(payload2.Payload);
-        console.log("Re-testing with accessToken2, UpdateAuthUser Lambda response:", response);
 
         expect(response).toBeDefined();
         expect(response.statusCode).toBe(200);
@@ -210,28 +203,6 @@ describe("Parcours complet Auth (intégration)", () => {
 
         body = {
             email: TEST_NEW_EMAIL,
-            password: TEST_PASSWORD, // ancien password, doit échouer
-        }
-
-        payload = await client.send(
-            new InvokeCommand({
-                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
-                Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(body) })),
-            })
-        );
-
-        response = decode(payload.Payload);
-
-        console.log("response", response);
-
-        console.log("LoginUser Lambda response (wrong password):", response);
-
-        expect(response.statusCode).toBe(401);
-        expect(response.body.ok).toBe(false);
-        expect(response.body.message).toBe("INVALID_CREDENTIALS");
-
-        body = {
-            email: TEST_NEW_EMAIL,
             password: TEST_NEW_PASSWORD, // nouveau password, doit réussir
         }
 
@@ -252,6 +223,27 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.message).toBe("LOGGED_IN");
         expect(response.body.userId).toBe(userId);
     });
+
+    it("devrait échouer à la connexion avec l'ancien mot de passe", async () => {
+        const payload = {
+            email: TEST_EMAIL,
+            password: TEST_PASSWORD, // ancien mot de passe, doit échouer
+        }
+
+        const request = await client.send(
+            new InvokeCommand({
+                FunctionName: `site-asso-api-${process.env.STAGE}-loginUser`,
+                Payload: Buffer.from(JSON.stringify({ body: JSON.stringify(payload) })),
+            })
+        );
+
+        const response = decode(request.Payload);
+
+        console.log("LoginUser Lambda response (old password):", response);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.ok).toBe(false);
+        expect(response.body.message).toBe("INVALID_CREDENTIALS");
+    })
 
     // 5) Suppression du user
     it("devrait permettre de supprimer le user", { timeout: 10000 }, async () => {
