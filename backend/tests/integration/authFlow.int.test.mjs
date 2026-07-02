@@ -24,9 +24,7 @@ let accessToken2;
 let refreshToken;
 
 describe("Parcours complet Auth (intégration)", () => {
-    // 1) Création de l’utilisateur
-    beforeAll(async () => {
-
+    it("devrait créer un utilisateur avec succès", async () => {
         const body = {
             email: TEST_EMAIL,
             password: TEST_PASSWORD,
