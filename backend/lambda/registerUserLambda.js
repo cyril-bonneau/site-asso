@@ -61,7 +61,7 @@ async function registerUserCore(event) {
 
         // il est attendu au minimum userId, email, firstName, lastName
         const detail = { email, firstName, lastName, userId, privilege };
-        const rawToken = randomBytes(32).toString("base64url");
+        const rawToken = { validationToken: randomBytes(32).toString("base64url") }
         const eventEntry = buildUserRegisterEvent(detail, "UserRegistered");
 
         try {
@@ -72,7 +72,7 @@ async function registerUserCore(event) {
             return json(500, { ok: false, message: "INTERNAL_ERROR" });
         }
 
-        const emailValidationEvent = buildUserRegisterEvent(rawToken, "emailValidationToken");
+        const emailValidationEvent = buildUserRegisterEvent(rawToken, "emailValidation");
 
         const resultEvent = await eventBridgePutEvents(eventEntry);
         const emailValidationResult = await eventBridgePutEvents(emailValidationEvent);
@@ -197,7 +197,7 @@ async function createTokenEntry(rawToken, userId) {
     const params = {
         TableName: ACCOUNT_VALIDATION_TABLE,
         Item: {
-            PK: rawToken,
+            PK: rawToken.validationToken,
             SK: 'EMAIL_VALIDATION',
             userId: userId,
             createdAt: new Date().toISOString(),
@@ -206,7 +206,7 @@ async function createTokenEntry(rawToken, userId) {
     };
     const result = await sendPutToDb(params);
     return result;
-}
+} //peut être que cette partie devrais être dans un autre lambda
 
 function buildUserRegisterEvent(detail, detailType) {
     return {
