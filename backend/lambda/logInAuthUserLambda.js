@@ -87,7 +87,11 @@ async function handlerCore(event, _context, { auth }) {
  */
 async function loginCore({ email, password }) {
     try {
-        const { check, userId, privilege } = await checkPasswordByEmail({ password, email });
+        const { check, userId, privilege, validated } = await checkPasswordByEmail({ password, email });
+
+        if (validated === false) {
+            return json(401, { ok: false, message: "ACCOUNT_NOT_VALIDATED" });
+        }
 
         // Message identique dans les deux cas (email inconnu ou mot de passe incorrect)
         // pour ne pas révéler si le compte existe ou non.

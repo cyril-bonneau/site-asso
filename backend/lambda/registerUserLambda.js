@@ -137,6 +137,7 @@ async function createAuthEntry(email, password) {
                         PK: userEmail,
                         SK: "UNIQUE",
                         userId: userId,
+                        validated: false,
                         createdAt: now,
                     },
                     ConditionExpression: "attribute_not_exists(PK)",

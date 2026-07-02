@@ -15,6 +15,14 @@ export async function checkPasswordByEmail({ password, email }) {
     }
 
     if (await verifyPassword(auth.passwordHash, password)) {
+        if (auth.validated === false) {
+            return {
+                check: true,
+                userId: auth.userId,
+                privilege: auth.privilege,
+                validated: auth.validated
+            }
+        }
         return {
             check: true,
             userId: auth.userId,
@@ -44,12 +52,13 @@ async function getAuthByEmail(email) {
                 "PK": `EMAIL#${email}`,
                 "SK": "UNIQUE",
             },
-            ProjectionExpression: "userId",
+            ProjectionExpression: "userId, validated",
         });
         console.log("getAuthByEmail - userId get result:", result);
         const index = result.userId.indexOf("#"); // Extraire l'userId du format "USER#<userId>"
         const userId = index === -1 ? null : result.userId.slice(index + 1);
         console.log("getAuthByEmail - extracted userId:", userId);
+        const validated = result.validated;
 
         result = await getFromDb({
             TableName: AUTH_TABLE,
@@ -62,9 +71,10 @@ async function getAuthByEmail(email) {
         console.log("getAuthByEmail - passwordHash get raw result:", result);
         const passwordHash = result.passwordHash;
         console.log("getAuthByEmail - passwordHash get result:", passwordHash);
-        
+
         const res = {
             userId,
+            validated,
             passwordHash
         }
 
