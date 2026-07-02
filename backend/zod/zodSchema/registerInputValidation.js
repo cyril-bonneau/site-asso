@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { regex } from 'helpers/toolbox.js';
+import { regex } from '../../helpers/toolbox.js';
 
 export const registerInputSchema = z.object({
     email: z.string().email().trim().max(255).transform((val) => val.toLowerCase()),

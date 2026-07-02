@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { regex } from 'helpers/toolbox.js';
+import { regex } from '../../helpers/toolbox.js';
 
 export const updateInputSchema = z.object({
     newEmail: z.email().trim().toLowerCase().optional(),
