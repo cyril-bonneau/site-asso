@@ -75,7 +75,7 @@ functions:
       KMS_JWT_KEY_ID: alias/site-asso-auth-${sls:stage}
       REFRESH_JWT_HMAC: ${ssm:/site-asso/${sls:stage}/secret/refreshTokenHmac}
       USER_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbUserTable}
-      TOKEN_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbTokenTable}
+      ACCOUNT_VALIDATION_TABLE: ${cf:site-asso-infra-${sls:stage}.DdbAccountValidationTable}
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -97,7 +97,7 @@ functions:
       - Effect: Allow
         Action:
           - dynamodb:PutItem
-        Resource: ${cf:site-asso-infra-${sls:stage}.DdbTokenTableArn}
+        Resource: ${cf:site-asso-infra-${sls:stage}.DdbAccountValidationTableArn}
 
       - Effect: Allow
         Action:

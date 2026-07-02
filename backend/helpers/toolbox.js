@@ -99,3 +99,11 @@ export function sanitizeText(input, opts = {}) {
 
     return value.trim().slice(0, maxLength);
 }
+
+export async function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export const regex = {
+    name: /^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u,
+};

@@ -24,21 +24,17 @@ resources:
         KeySchema:
           - { AttributeName: PK, KeyType: HASH }
           - { AttributeName: SK, KeyType: RANGE }
-          
         GlobalSecondaryIndexes:
-        
           - IndexName: GSI1
             KeySchema:
               - { AttributeName: GSI1, KeyType: HASH }
               - { AttributeName: SK,   KeyType: RANGE }
             Projection: { ProjectionType: ALL }
-
           - IndexName: GSI2
             KeySchema:
               - { AttributeName: GSI2, KeyType: HASH }
               - { AttributeName: SK,   KeyType: RANGE }
             Projection: { ProjectionType: ALL }
-
         TimeToLiveSpecification:
           AttributeName: TTL
           Enabled: true
@@ -72,6 +68,22 @@ resources:
         TimeToLiveSpecification:
           AttributeName: TTL
           Enabled: false
+
+    AccountValidationTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: site-asso-${sls:stage}-account-validation
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S } #TOKEN
+          - { AttributeName: SK, AttributeType: S } #TYPE
+          - { AttributeName: userId, AttributeType: S }
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH }
+          - { AttributeName: SK, KeyType: RANGE }
+        TimeToLiveSpecification:
+          AttributeName: TTL
+          Enabled: true
 
     TokenTable:
       Type: AWS::DynamoDB::Table
@@ -202,6 +214,15 @@ resources:
       Value: !GetAtt RateLimitTable.Arn
       Export:
         Name: site-asso-infra-${sls:stage}-DdbRateLimitTableArn
+
+    DdbAccountValidationTable:
+      Value: !Ref AccountValidationTable
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAccountValidationTable
+    DdbAccountValidationTableArn:
+      Value: !GetAtt AccountValidationTable.Arn
+      Export:
+        Name: site-asso-infra-${sls:stage}-DdbAccountValidationTableArn
 
     DdbTokenTable:
       Value: !Ref TokenTable
