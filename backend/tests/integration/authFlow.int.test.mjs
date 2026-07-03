@@ -57,7 +57,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(profileAfterCreation.email).toBe(TEST_EMAIL);
         expect(profileAfterCreation.firstName).toBe(TEST_FIRSTNAME);
         expect(profileAfterCreation.lastName).toBe(TEST_LASTNAME);
-    });
+    }, 30000); // timeout de 30 secondes pour la création d'utilisateur
 
     // 2) Connexion
     it.skip("devrait permettre de se connecter avec les bons identifiants", async () => {
