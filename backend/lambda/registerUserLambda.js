@@ -125,6 +125,7 @@ async function createAuthEntry(email, password) {
                         email: email,
                         passwordHash: hashedPwd,
                         createdAt: now,
+                        expiredAt: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
                     },
                     ConditionExpression: "attribute_not_exists(PK)",
                     ReturnValuesOnConditionCheckFailure: "ALL_OLD",
@@ -139,6 +140,7 @@ async function createAuthEntry(email, password) {
                         userId: userId,
                         validated: false,
                         createdAt: now,
+                        expiredAt: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
                     },
                     ConditionExpression: "attribute_not_exists(PK)",
                     ReturnValuesOnConditionCheckFailure: "ALL_OLD",

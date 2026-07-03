@@ -51,7 +51,7 @@ resources:
           - { AttributeName: PK, KeyType: HASH }
           - { AttributeName: SK, KeyType: RANGE }
         TimeToLiveSpecification:
-          AttributeName: TTL
+          AttributeName: expiredAt
           Enabled: true
         StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
