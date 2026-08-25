@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:unit": "vitest run tests/unit",
+    "test:unit:ci": "vitest run tests/unit/registerUser.test.mjs tests/unit/registerUserCharacterization.test.mjs tests/unit/buildRegisterAuthTransactionItems.test.mjs tests/unit/classifyRegisterTransactionCancellation.test.mjs tests/unit/buildAccountValidationTokenItem.test.mjs",
     "test:integration": "vitest run tests/integration --no-file-parallelism",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"

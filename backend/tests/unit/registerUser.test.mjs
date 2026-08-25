@@ -115,7 +115,12 @@ describe("registerUserLambda", () => {
         const response = await registerUserHandler({
             body: JSON.stringify({
                 email: "x@test.com",
-                password: "weak",
+                // Must satisfy the schema (min 8 chars, firstName/lastName required) so the
+                // request actually reaches the password policy. The mocked policy above is
+                // what drives the 422.
+                password: "weakpassword",
+                firstName: "Jack",
+                lastName: "Larnaque",
             }),
         });
 
@@ -140,6 +145,8 @@ describe("registerUserLambda", () => {
             body: JSON.stringify({
                 email: "x@test.com",
                 password: "StrongPwd123!",
+                firstName: "Jack",
+                lastName: "Larnaque",
             }),
         });
 

@@ -5,7 +5,13 @@ on:
     branches:
       - master
       - dev
-      - feature/**
+      - pre-prod
+      - 'pre-prod/**'
+      - 'prod/**'
+      - 'feature/**'
+      - 'refactor/**'
+      - 'fix/**'
+      - 'chore/**'
     paths:
       - 'backend/**'
       - 'serverless.api.yml'
@@ -22,35 +28,140 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # test:
-  #   name: Lint & tests backend
-  #   runs-on: ubuntu-latest
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Use Node.js 22
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: |
-  #           backend/package-lock.json
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
 
-  #     - name: Install backend dependencies
-  #       working-directory: ./backend
-  #       run: npm ci
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
 
-  #     - name: Run unit tests
-  #       working-directory: ./backend
-  #       run: npm run test:unit
+      # Scoped to the flows that have been refactored and characterized — currently
+      # register. Suites for flows not yet reworked are excluded on purpose: gating on
+      # known-broken tests would just train everyone to ignore a red pipeline.
+      # To gate another flow, add its files to `test:unit:ci` in backend/package.json;
+      # this workflow does not need to change.
+      #
+      # Runs to completion. continue-on-error lets the report and the gate below still
+      # run, so a failure produces a full picture instead of stopping at the first red file.
+      - name: Run unit tests (refactored flows)
+        id: unit-tests-run
+        working-directory: ./backend
+        continue-on-error: true
+        run: |
+          npm run test:unit:ci -- \
+            --reporter=default \
+            --reporter=json \
+            --outputFile.json=unit-test-results.json
+
+      - name: Unit test report
+        if: always()
+        working-directory: ./backend
+        run: node ../.github/scripts/report-unit-tests.cjs
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: backend/unit-test-results.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Check gate - block on unit test failures
+        if: always()
+        working-directory: ./backend
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const RESULTS_PATH = 'unit-test-results.json';
+
+          if (!fs.existsSync(RESULTS_PATH)) {
+            console.log('::error::Unit tests produced no report - vitest crashed before running. Blocking deploy.');
+            process.exit(1);
+          }
+
+          const report = JSON.parse(fs.readFileSync(RESULTS_PATH, 'utf8'));
+
+          if (report.numFailedTests > 0) {
+            console.log(`::error::${report.numFailedTests} of ${report.numTotalTests} unit tests failed - blocking deploy. See the job summary for the full report.`);
+            process.exit(1);
+          }
+
+          console.log(`All ${report.numPassedTests} unit tests passed.`);
+          NODE
+
+  resolve-stage:
+    name: Resolve stage
+    runs-on: ubuntu-latest
+
+    outputs:
+      stage: ${{ steps.resolve.outputs.stage }}
+
+    steps:
+      - name: Resolve STAGE from branch
+        id: resolve
+        run: |
+          set -euo pipefail
+
+          # On pull_request, GITHUB_REF is refs/pull/N/merge, so prefer the head branch.
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "Current branch: $BRANCH"
+
+          # Lowercase, collapse every run of non-alphanumerics to a single dash,
+          # cap the length, then strip leading/trailing dashes. Keeps the stage usable
+          # as a CloudFormation stack name and an SSM parameter path segment.
+          slugify() {
+            printf '%s' "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | tr -cs 'a-z0-9' '-' \
+              | cut -c1-30 \
+              | sed -e 's/^-*//' -e 's/-*$//'
+          }
+
+          SUFFIX=""
+          case "$BRANCH" in
+            master|prod)  STAGE="prod" ;;
+            dev)          STAGE="dev" ;;
+            pre-prod)     STAGE="pre-prod" ;;
+            pre-prod/*)   SUFFIX="$(slugify "${BRANCH#pre-prod/}")"; STAGE="pre-prod${SUFFIX:+-$SUFFIX}" ;;
+            prod/*)       SUFFIX="$(slugify "${BRANCH#prod/}")";     STAGE="prod${SUFFIX:+-$SUFFIX}" ;;
+            *)            STAGE="sandbox" ;;
+          esac
+
+          echo "Resolved STAGE: $STAGE"
+          echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
+          echo "Branch \`$BRANCH\` deploys to stage **\`$STAGE\`**" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-infra:
     name: Deploy Infra
-    # needs: setup-aws
+    needs:
+      - resolve-stage
+      - unit-tests
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+
+    env:
+      STAGE: ${{ needs.resolve-stage.outputs.stage }}
+
+    # Serialize on the target stage, not the branch: feature/**, refactor/**, fix/**
+    # and chore/** all share the `sandbox` stage, and two simultaneous
+    # `serverless deploy --stage sandbox` runs would collide in CloudFormation.
+    concurrency:
+      group: site-asso-deploy-${{ needs.resolve-stage.outputs.stage }}
+      cancel-in-progress: false
 
     permissions:
       id-token: write      # pour l'OIDC vers AWS
@@ -59,20 +170,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set STAGE from branch
-        run: |
-          BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "Current branch: $BRANCH"
-
-          if [ "$BRANCH" = "master" ]; then
-            echo "STAGE=prod" >> $GITHUB_ENV
-          elif [ "$BRANCH" = "dev" ]; then
-            echo "STAGE=dev" >> $GITHUB_ENV
-          else
-            # feature/*
-            echo "STAGE=sandbox" >> $GITHUB_ENV
-          fi
 
       - name: Cache Serverless build
         uses: actions/cache@v4
@@ -120,20 +217,28 @@ jobs:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
         run: |
           npx serverless deploy --config serverless.infra.yml --stage $STAGE
-      
+
       - name: Sync KMS public key to SSM
         working-directory: ./backend
         env:
-          STAGE: ${{ env.STAGE }}
           AWS_REGION: eu-west-3
         run: |
           node scripts/syncKmsPublicKeyToSsm.js
 
   deploy-api:
     name: Deploy API
-    needs: deploy-infra
+    needs:
+      - resolve-stage
+      - deploy-infra
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+
+    env:
+      STAGE: ${{ needs.resolve-stage.outputs.stage }}
+
+    concurrency:
+      group: site-asso-deploy-${{ needs.resolve-stage.outputs.stage }}
+      cancel-in-progress: false
 
     permissions:
       id-token: write      # pour l'OIDC vers AWS
@@ -142,20 +247,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set STAGE from branch
-        run: |
-          BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "Current branch: $BRANCH"
-
-          if [ "$BRANCH" = "master" ]; then
-            echo "STAGE=prod" >> $GITHUB_ENV
-          elif [ "$BRANCH" = "dev" ]; then
-            echo "STAGE=dev" >> $GITHUB_ENV
-          else
-            # feature/*
-            echo "STAGE=sandbox" >> $GITHUB_ENV
-          fi
 
       - name: Cache Serverless build
         uses: actions/cache@v4
@@ -191,9 +282,13 @@ jobs:
 
   integration-tests:
     name: Integration tests
-    needs: 
+    needs:
+      - resolve-stage
       - deploy-api
     runs-on: ubuntu-latest
+
+    env:
+      STAGE: ${{ needs.resolve-stage.outputs.stage }}
 
     permissions:
       id-token: write      # pour l'OIDC vers AWS
@@ -202,20 +297,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set STAGE from branch
-        run: |
-          BRANCH="${GITHUB_REF#refs/heads/}"
-          echo "Current branch: $BRANCH"
-
-          if [ "$BRANCH" = "master" ]; then
-            echo "STAGE=prod" >> $GITHUB_ENV
-          elif [ "$BRANCH" = "dev" ]; then
-            echo "STAGE=dev" >> $GITHUB_ENV
-          else
-            # feature/*
-            echo "STAGE=sandbox" >> $GITHUB_ENV
-          fi
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4

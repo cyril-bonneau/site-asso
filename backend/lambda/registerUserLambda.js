@@ -8,6 +8,9 @@ import { sendTransactToDb, sendPutToDb } from "../dal/requestToDb.js";
 import { eventBridgePutEvents } from "../eventBridge/registerEventBus.js";
 import { validateInput } from "../zod/validateInput.js";
 import { registerInputSchema } from "../zod/zodSchema/registerInputValidation.js";
+import { buildRegisterAuthTransactionItems } from "../dal/buildRegisterAuthTransactionItems.js";
+import { classifyRegisterTransactionCancellation, REGISTER_CANCELLATION_OUTCOME } from "../dal/classifyRegisterTransactionCancellation.js";
+import { buildAccountValidationTokenItem } from "../dal/buildAccountValidationTokenItem.js";
 
 const AUTH_TABLE = process.env.AUTH_TABLE;
 const EVENT_BUS_NAME = process.env.REGISTER_EVENT_BUS;
@@ -111,42 +114,14 @@ async function createAuthEntry(email, password) {
     for (let attempt = 0; attempt < maxIdRetries; attempt++) {
         const id = nanoid();
         const now = new Date().toISOString();
-        const userEmail = `EMAIL#${email}`;
-        const userId = `USER#${id}`;
 
-        const transaction = [
-            {
-                Put: {
-                    TableName: AUTH_TABLE,
-                    Item: {
-                        PK: userId,
-                        SK: "AUTH",
-                        userId: id,
-                        email: email,
-                        passwordHash: hashedPwd,
-                        createdAt: now,
-                        expiredAt: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
-                    },
-                    ConditionExpression: "attribute_not_exists(PK)",
-                    ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-                },
-            },
-            {
-                Put: {
-                    TableName: AUTH_TABLE,
-                    Item: {
-                        PK: userEmail,
-                        SK: "UNIQUE",
-                        userId: userId,
-                        validated: false,
-                        createdAt: now,
-                        expiredAt: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
-                    },
-                    ConditionExpression: "attribute_not_exists(PK)",
-                    ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-                }
-            }
-        ];
+        const transaction = buildRegisterAuthTransactionItems({
+            email: email,
+            hashedPassword: hashedPwd,
+            generatedUserId: id,
+            createdAtIsoTimestamp: now,
+            authTableName: AUTH_TABLE,
+        });
 
         try {
             await sendTransactToDb(transaction, true);
@@ -161,25 +136,16 @@ async function createAuthEntry(email, password) {
 
         } catch (err) {
             if (err.name === "TransactionCanceledException" && err.CancellationReasons) {
-                const reasons = err.CancellationReasons.map((r, i) => ({
-                    index: i,
-                    opType: Object.keys(transaction[i])[0],
-                    code: r.Code,
-                    message: r.Message,
-                }));
-                console.info("createAuthEntry cancellation reasons", reasons)
+                const cancellationOutcome = classifyRegisterTransactionCancellation(
+                    err.CancellationReasons,
+                    transaction
+                );
 
-                const emailCheck = reasons.find(r => r.index === 0);
-                console.info("emailCheck", emailCheck)
-
-                if (emailCheck && emailCheck.code === "ConditionalCheckFailed") {
+                if (cancellationOutcome === REGISTER_CANCELLATION_OUTCOME.EMAIL_ALREADY_EXISTS) {
                     return { statusCode: 409, error: "EMAIL_ALREADY_EXISTS" }
                 }
 
-                const checkId = reasons.find(r => r.index === 1);
-                console.info("checkId", checkId)
-
-                if (checkId && checkId.code === "ConditionalCheckFailed") {
+                if (cancellationOutcome === REGISTER_CANCELLATION_OUTCOME.ID_COLLISION) {
                     console.error("ID_COLLISION RETRYING...");
                     if (attempt < maxIdRetries - 1) {
                         await new Promise(r => setTimeout(r, 25 * (attempt + 1)));
@@ -196,16 +162,11 @@ async function createAuthEntry(email, password) {
 }
 
 async function createTokenEntry(rawToken, userId) {
-    const params = {
-        TableName: ACCOUNT_VALIDATION_TABLE,
-        Item: {
-            PK: rawToken.validationToken,
-            SK: 'EMAIL_VALIDATION',
-            userId: userId,
-            createdAt: new Date().toISOString(),
-            expiredAt: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24h
-        }
-    };
+    const params = buildAccountValidationTokenItem({
+        rawToken: rawToken,
+        userId: userId,
+        accountValidationTableName: ACCOUNT_VALIDATION_TABLE,
+    });
     const result = await sendPutToDb(params);
     return result;
 } //peut être que cette partie devrais être dans un autre lambda
