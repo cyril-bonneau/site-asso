@@ -69,7 +69,10 @@ jobs:
       - name: Unit test report
         if: always()
         working-directory: ./backend
-        run: node ../.github/scripts/report-unit-tests.cjs
+        run: |
+          node ../.github/scripts/report-test-results.cjs \
+            --title "Unit tests" \
+            --results unit-test-results.json
 
       - name: Upload unit test report
         if: always()
@@ -321,7 +324,56 @@ jobs:
           role-to-assume: arn:aws:iam::011664843444:role/github_pipeline_access
           role-session-name: site-asso-ci
 
+      # Same shape as the unit job: run to completion, report, then gate. Integration
+      # failures are worth seeing in full - a partial run tells you which step of the
+      # flow broke, which stopping at the first red file would hide.
       - name: Run integration tests
+        id: integration-tests-run
+        working-directory: ./backend
+        continue-on-error: true
+        run: |
+          npm run test:integration -- \
+            --reporter=default \
+            --reporter=json \
+            --outputFile.json=integration-test-results.json
+
+      - name: Integration test report
+        if: always()
         working-directory: ./backend
         run: |
-          npm run test:integration
+          node ../.github/scripts/report-test-results.cjs \
+            --title "Integration tests" \
+            --results integration-test-results.json \
+            --context "Stage: ${STAGE}"
+
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: backend/integration-test-results.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Check gate - fail on integration test failures
+        if: always()
+        working-directory: ./backend
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const RESULTS_PATH = 'integration-test-results.json';
+
+          if (!fs.existsSync(RESULTS_PATH)) {
+            console.log('::error::Integration tests produced no report - vitest crashed before running.');
+            process.exit(1);
+          }
+
+          const report = JSON.parse(fs.readFileSync(RESULTS_PATH, 'utf8'));
+
+          if (report.numFailedTests > 0) {
+            console.log(`::error::${report.numFailedTests} of ${report.numTotalTests} integration tests failed. See the job summary for the full report.`);
+            process.exit(1);
+          }
+
+          console.log(`Integration tests: ${report.numPassedTests} passed, ${report.numPendingTests || 0} skipped.`);
+          NODE

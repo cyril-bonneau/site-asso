@@ -12,6 +12,7 @@ backend/keys
 # testing
 /coverage
 unit-test-results.json
+integration-test-results.json
 
 # production
 /build
