@@ -60,7 +60,7 @@ describe("Parcours complet Auth (intégration)", () => {
     }, 30000); // timeout de 30 secondes pour la création d'utilisateur
 
     // 2) Connexion
-    it.skip("devrait permettre de se connecter avec les bons identifiants", async () => {
+    it("devrait permettre de se connecter avec les bons identifiants", async () => {
 
         const payload = {
             email: TEST_EMAIL,
@@ -93,7 +93,7 @@ describe("Parcours complet Auth (intégration)", () => {
     });
 
     // 3) Update du user (profil / email)
-    it.skip("devrait permettre de mettre à jour le profil user", async () => {
+    it("devrait permettre de mettre à jour le profil user", async () => {
 
         const body = {
             newEmail: TEST_NEW_EMAIL,
@@ -164,7 +164,7 @@ describe("Parcours complet Auth (intégration)", () => {
     });
 
     // 4) Changement de mot de passe
-    it.skip("devrait permettre de modifier le mot de passe", async () => {
+    it("devrait permettre de modifier le mot de passe", async () => {
 
         let body = {
             oldPassword: TEST_PASSWORD,
@@ -222,7 +222,7 @@ describe("Parcours complet Auth (intégration)", () => {
         expect(response.body.userId).toBe(userId);
     });
 
-    it.skip("devrait échouer à la connexion avec l'ancien mot de passe", async () => {
+    it("devrait échouer à la connexion avec l'ancien mot de passe", async () => {
         const payload = {
             email: TEST_EMAIL,
             password: TEST_PASSWORD, // ancien mot de passe, doit échouer

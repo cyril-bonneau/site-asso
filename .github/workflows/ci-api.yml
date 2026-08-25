@@ -159,8 +159,11 @@ jobs:
     # Serialize on the target stage, not the branch: feature/**, refactor/**, fix/**
     # and chore/** all share the `sandbox` stage, and two simultaneous
     # `serverless deploy --stage sandbox` runs would collide in CloudFormation.
+    #
+    # The group MUST be unique per job. Two dependency-chained jobs sharing one group
+    # deadlock: the downstream job waits on a group its own predecessor occupied.
     concurrency:
-      group: site-asso-deploy-${{ needs.resolve-stage.outputs.stage }}
+      group: site-asso-deploy-infra-${{ needs.resolve-stage.outputs.stage }}
       cancel-in-progress: false
 
     permissions:
@@ -236,8 +239,9 @@ jobs:
     env:
       STAGE: ${{ needs.resolve-stage.outputs.stage }}
 
+    # Distinct from deploy-infra's group on purpose - see the note there.
     concurrency:
-      group: site-asso-deploy-${{ needs.resolve-stage.outputs.stage }}
+      group: site-asso-deploy-api-${{ needs.resolve-stage.outputs.stage }}
       cancel-in-progress: false
 
     permissions:
